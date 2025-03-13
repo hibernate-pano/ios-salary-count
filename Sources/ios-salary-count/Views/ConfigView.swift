@@ -1,9 +1,17 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct ConfigView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var configs: [SalaryConfig]
+    @EnvironmentObject private var appState: AppState
+    @StateObject private var themeManager = ThemeManager.shared
+    
+    @State private var showingImportPicker = false
+    @State private var showingExportSheet = false
+    @State private var showingSyncAlert = false
+    @State private var showingThemePicker = false
     
     @State private var monthlySalary: Double = 3000
     @State private var workStartTime = Calendar.current.date(from: DateComponents(hour: 9, minute: 0)) ?? Date()
@@ -17,73 +25,156 @@ struct ConfigView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("工资设置") {
-                    HStack {
-                        Text("月薪")
-                        Spacer()
-                        TextField("月薪", value: $monthlySalary, format: .currency(code: "CNY"))
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-                
-                Section("工作时间") {
-                    DatePicker("上班时间", selection: $workStartTime, displayedComponents: .hourAndMinute)
-                    DatePicker("下班时间", selection: $workEndTime, displayedComponents: .hourAndMinute)
-                }
-                
-                Section("午休时间") {
-                    Toggle("启用午休", isOn: Binding(
-                        get: { lunchStartTime != nil && lunchEndTime != nil },
-                        set: { enabled in
-                            if enabled {
-                                lunchStartTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0))
-                                lunchEndTime = Calendar.current.date(from: DateComponents(hour: 13, minute: 0))
-                            } else {
-                                lunchStartTime = nil
-                                lunchEndTime = nil
-                            }
+                if let config = configs.first {
+                    Section("工资设置") {
+                        HStack {
+                            Text("月薪")
+                            Spacer()
+                            TextField("月薪", value: $config.monthlySalary, format: .currency(code: "CNY"))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
                         }
-                    ))
-                    
-                    if lunchStartTime != nil && lunchEndTime != nil {
-                        DatePicker("午休开始", selection: Binding(
-                            get: { lunchStartTime ?? Date() },
-                            set: { lunchStartTime = $0 }
-                        ), displayedComponents: .hourAndMinute)
                         
-                        DatePicker("午休结束", selection: Binding(
-                            get: { lunchEndTime ?? Date() },
-                            set: { lunchEndTime = $0 }
-                        ), displayedComponents: .hourAndMinute)
-                    }
-                }
-                
-                Section("工作日") {
-                    ForEach(0..<7) { index in
-                        Toggle(weekdays[index], isOn: Binding(
-                            get: { workDays.contains(index) },
-                            set: { isSelected in
-                                if isSelected {
-                                    workDays.insert(index)
-                                } else {
-                                    workDays.remove(index)
+                        DatePicker("上班时间", selection: $config.workStartTime, displayedComponents: .hourAndMinute)
+                        DatePicker("下班时间", selection: $config.workEndTime, displayedComponents: .hourAndMinute)
+                        
+                        Toggle("启用午休", isOn: Binding(
+                            get: { config.lunchStartTime != nil },
+                            set: { enabled in
+                                withAnimation {
+                                    if enabled {
+                                        config.lunchStartTime = Calendar.current.date(from: DateComponents(hour: 12, minute: 0))
+                                        config.lunchEndTime = Calendar.current.date(from: DateComponents(hour: 13, minute: 0))
+                                    } else {
+                                        config.lunchStartTime = nil
+                                        config.lunchEndTime = nil
+                                    }
                                 }
                             }
                         ))
+                        
+                        if config.lunchStartTime != nil {
+                            DatePicker("午休开始", selection: Binding(
+                                get: { config.lunchStartTime ?? Date() },
+                                set: { config.lunchStartTime = $0 }
+                            ), displayedComponents: .hourAndMinute)
+                            
+                            DatePicker("午休结束", selection: Binding(
+                                get: { config.lunchEndTime ?? Date() },
+                                set: { config.lunchEndTime = $0 }
+                            ), displayedComponents: .hourAndMinute)
+                        }
+                    }
+                    
+                    Section("工作日设置") {
+                        ForEach(1...7, id: \.self) { weekday in
+                            let dayName = Calendar.current.weekdaySymbols[weekday - 1]
+                            Toggle(dayName, isOn: Binding(
+                                get: { config.workDays.contains(weekday) },
+                                set: { isSelected in
+                                    withAnimation {
+                                        if isSelected {
+                                            config.workDays.insert(weekday)
+                                        } else {
+                                            config.workDays.remove(weekday)
+                                        }
+                                    }
+                                }
+                            ))
+                        }
+                    }
+                }
+                
+                Section("节假日设置") {
+                    Button(action: {
+                        Task {
+                            await appState.syncHolidays()
+                        }
+                    }) {
+                        HStack {
+                            Text("同步节假日")
+                            Spacer()
+                            if appState.isLoading {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(appState.isLoading)
+                }
+                
+                Section("主题设置") {
+                    Button(action: {
+                        showingThemePicker = true
+                    }) {
+                        HStack {
+                            Text("主题")
+                            Spacer()
+                            Text(themeManager.selectedTheme.rawValue)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                Section("数据管理") {
+                    Button(action: {
+                        showingImportPicker = true
+                    }) {
+                        Label("导入数据", systemImage: "square.and.arrow.down")
+                    }
+                    
+                    Button(action: {
+                        showingExportSheet = true
+                    }) {
+                        Label("导出数据", systemImage: "square.and.arrow.up")
+                    }
+                }
+                
+                Section("关于") {
+                    HStack {
+                        Text("版本")
+                        Spacer()
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
+                            .foregroundColor(.secondary)
                     }
                 }
             }
-            .navigationTitle("工资设置")
+            .navigationTitle("设置")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
-                        saveConfig()
+                        withAnimation {
+                            saveConfig()
+                        }
                     }
                 }
             }
             .onAppear {
                 loadConfig()
+            }
+            .fileImporter(
+                isPresented: $showingImportPicker,
+                allowedContentTypes: [.json],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    
+                    do {
+                        let data = try Data(contentsOf: url)
+                        try appState.importData(data)
+                    } catch {
+                        appState.error = error
+                    }
+                case .failure(let error):
+                    appState.error = error
+                }
+            }
+            .sheet(isPresented: $showingExportSheet) {
+                ShareSheet(items: [try! appState.exportData()])
+            }
+            .sheet(isPresented: $showingThemePicker) {
+                ThemePickerView(themeManager: themeManager)
             }
         }
     }
@@ -125,7 +216,51 @@ struct ConfigView: View {
     }
 }
 
+struct ThemePickerView: View {
+    @ObservedObject var themeManager: ThemeManager
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            List(AppTheme.allCases, id: \.self) { theme in
+                Button(action: {
+                    themeManager.updateTheme(theme)
+                    dismiss()
+                }) {
+                    HStack {
+                        Text(theme.rawValue)
+                        Spacer()
+                        if themeManager.selectedTheme == theme {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+                
+                Text(themeManager.getThemeDescription(theme))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .navigationTitle("选择主题")
+            .navigationBarItems(trailing: Button("完成") {
+                dismiss()
+            })
+        }
+    }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
 #Preview {
     ConfigView()
         .modelContainer(for: SalaryConfig.self)
+        .environmentObject(AppState())
 } 

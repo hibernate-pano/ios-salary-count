@@ -53,30 +53,28 @@ final class HolidayConfig {
 extension HolidayConfig {
     // 获取指定年份的法定节假日
     static func fetchHolidays(year: Int) async throws -> [HolidayConfig] {
-        // TODO: 实现从网络获取节假日数据的逻辑
-        // 这里先返回一些示例数据
-        return [
-            // 元旦
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 1, day: 1))!, name: "元旦"),
-            // 春节
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 2, day: 10))!, name: "春节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 2, day: 11))!, name: "春节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 2, day: 12))!, name: "春节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 2, day: 13))!, name: "春节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 2, day: 14))!, name: "春节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 2, day: 15))!, name: "春节"),
-            // 清明节
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 4, day: 4))!, name: "清明节"),
-            // 劳动节
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 5, day: 1))!, name: "劳动节"),
-            // 端午节
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 6, day: 10))!, name: "端午节"),
-            // 中秋节
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 9, day: 15))!, name: "中秋节"),
-            // 国庆节
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 10, day: 1))!, name: "国庆节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 10, day: 2))!, name: "国庆节"),
-            HolidayConfig(date: Calendar.current.date(from: DateComponents(year: year, month: 10, day: 3))!, name: "国庆节")
-        ]
+        return try await HolidayService.shared.fetchHolidays(year: year)
+    }
+    
+    // 同步当前年份的节假日数据
+    static func syncCurrentYearHolidays() async throws {
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: Date())
+        _ = try await fetchHolidays(year: currentYear)
+    }
+    
+    // 同步指定年份的节假日数据
+    static func syncHolidays(year: Int) async throws {
+        _ = try await fetchHolidays(year: year)
+    }
+    
+    // 清除指定年份的缓存
+    static func clearCache(year: Int) {
+        HolidayService.shared.clearCache(year: year)
+    }
+    
+    // 清除所有缓存
+    static func clearAllCache() {
+        HolidayService.shared.clearAllCache()
     }
 } 

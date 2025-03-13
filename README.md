@@ -63,26 +63,31 @@
 ## 项目结构
 ```
 ios-salary-count/
-├── Widget/
-│   ├── SalaryWidget.swift
-│   ├── SalaryWidgetBundle.swift
-│   └── WidgetViews/
-│       ├── SmallWidgetView.swift
-│       ├── MediumWidgetView.swift
-│       └── LargeWidgetView.swift
-├── Models/
-│   ├── SalaryConfig.swift
-│   ├── WorkTimeConfig.swift
-│   └── HolidayConfig.swift
-├── Views/
-│   ├── ConfigView.swift
-│   └── WidgetView.swift
-├── Utils/
-│   ├── SalaryCalculator.swift
-│   ├── WorkDayHelper.swift
-│   └── HolidayHelper.swift
-└── Resources/
-    └── Assets.xcassets
+├── Sources/
+│   └── ios-salary-count/
+│       ├── Widget/
+│       │   ├── SalaryWidget.swift
+│       │   ├── SalaryWidgetBundle.swift
+│       │   └── WidgetViews/
+│       │       ├── SmallWidgetView.swift
+│       │       ├── MediumWidgetView.swift
+│       │       └── LargeWidgetView.swift
+│       ├── Models/
+│       │   ├── SalaryConfig.swift
+│       │   ├── WorkTimeConfig.swift
+│       │   └── HolidayConfig.swift
+│       ├── Views/
+│       │   ├── ConfigView.swift
+│       │   └── WidgetView.swift
+│       ├── Utils/
+│       │   ├── SalaryCalculator.swift
+│       │   ├── WorkDayHelper.swift
+│       │   └── HolidayHelper.swift
+│       ├── SalaryApp.swift
+│       └── Info.plist
+├── Tests/
+├── Package.swift
+└── README.md
 ```
 
 ## 系统要求
@@ -107,18 +112,48 @@ ios-salary-count/
 
 ## 开发计划
 
+### 第一阶段：基础功能实现
 - [x] 项目初始化
 - [x] 基础 UI 框架搭建
 - [x] 工资计算核心逻辑实现
 - [x] 小组件开发
 - [x] 数据持久化
-- [ ] UI 美化和优化
-- [ ] 测试和调试
-- [ ] App Store 发布准备
+
+### 第二阶段：功能完善
+- [ ] 节假日同步功能
+- [ ] 深色/浅色模式支持
+- [ ] 多语言支持
+- [ ] 数据备份/恢复
+- [ ] 用户引导流程
+
+### 第三阶段：性能优化
+- [ ] 缓存机制优化
+- [ ] 后台任务优化
+- [ ] 内存管理优化
+- [ ] 网络请求优化
+- [ ] 小组件刷新优化
+
+### 第四阶段：质量保证
+- [ ] 单元测试编写
+- [ ] UI 测试编写
+- [ ] 性能测试
+- [ ] 内存泄漏检测
+- [ ] 崩溃监控
+
+### 第五阶段：发布准备
+- [ ] App Store 发布材料准备
+- [ ] 应用截图制作
+- [ ] 应用描述编写
+- [ ] 关键词优化
+- [ ] 隐私政策更新
 
 ## 贡献指南
 
-欢迎提交 Issue 和 Pull Request 来帮助改进这个项目。
+1. Fork 本仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的改动 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启一个 Pull Request
 
 ## 许可证
 
