@@ -17,6 +17,14 @@ final class SalaryConfig {
     // 工作日配置（0-6 代表周日到周六）
     var workDays: Set<Int>
     
+    // 加班工资配置
+    var overtimeRate: Double // 加班工资倍率（默认1.5）
+    var overtimeStartTime: Date? // 加班开始时间（可选）
+    var overtimeEndTime: Date? // 加班结束时间（可选）
+    
+    // 特殊节假日工资倍率
+    var holidayOvertimeRate: Double // 节假日加班工资倍率（默认3.0）
+    
     // 创建时间
     var createdAt: Date
     
@@ -29,7 +37,11 @@ final class SalaryConfig {
         workEndTime: Date = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date(),
         lunchStartTime: Date? = Calendar.current.date(from: DateComponents(hour: 12, minute: 0)),
         lunchEndTime: Date? = Calendar.current.date(from: DateComponents(hour: 13, minute: 0)),
-        workDays: Set<Int> = [1, 2, 3, 4, 5] // 默认周一到周五
+        workDays: Set<Int> = [1, 2, 3, 4, 5], // 默认周一到周五
+        overtimeRate: Double = 1.5,
+        overtimeStartTime: Date? = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)),
+        overtimeEndTime: Date? = Calendar.current.date(from: DateComponents(hour: 21, minute: 0)),
+        holidayOvertimeRate: Double = 3.0
     ) {
         self.monthlySalary = monthlySalary
         self.workStartTime = workStartTime
@@ -37,6 +49,10 @@ final class SalaryConfig {
         self.lunchStartTime = lunchStartTime
         self.lunchEndTime = lunchEndTime
         self.workDays = workDays
+        self.overtimeRate = overtimeRate
+        self.overtimeStartTime = overtimeStartTime
+        self.overtimeEndTime = overtimeEndTime
+        self.holidayOvertimeRate = holidayOvertimeRate
         self.createdAt = Date()
         self.updatedAt = Date()
     }
@@ -48,7 +64,11 @@ final class SalaryConfig {
         workEndTime: Date? = nil,
         lunchStartTime: Date? = nil,
         lunchEndTime: Date? = nil,
-        workDays: Set<Int>? = nil
+        workDays: Set<Int>? = nil,
+        overtimeRate: Double? = nil,
+        overtimeStartTime: Date? = nil,
+        overtimeEndTime: Date? = nil,
+        holidayOvertimeRate: Double? = nil
     ) {
         if let monthlySalary = monthlySalary {
             self.monthlySalary = monthlySalary
@@ -67,6 +87,18 @@ final class SalaryConfig {
         }
         if let workDays = workDays {
             self.workDays = workDays
+        }
+        if let overtimeRate = overtimeRate {
+            self.overtimeRate = overtimeRate
+        }
+        if let overtimeStartTime = overtimeStartTime {
+            self.overtimeStartTime = overtimeStartTime
+        }
+        if let overtimeEndTime = overtimeEndTime {
+            self.overtimeEndTime = overtimeEndTime
+        }
+        if let holidayOvertimeRate = holidayOvertimeRate {
+            self.holidayOvertimeRate = holidayOvertimeRate
         }
         self.updatedAt = Date()
     }
@@ -124,6 +156,52 @@ final class SalaryConfig {
         
         // 每秒工资
         return dailySalary / dailyWorkSeconds
+    }
+    
+    // 计算加班时间（秒）
+    func calculateOvertimeSeconds(for date: Date) -> TimeInterval {
+        guard let overtimeStart = overtimeStartTime,
+              let overtimeEnd = overtimeEndTime else {
+            return 0
+        }
+        
+        let calendar = Calendar.current
+        let now = date
+        
+        // 获取今天的加班开始和结束时间
+        let today = calendar.startOfDay(for: now)
+        let overtimeStartToday = calendar.date(bySettingHour: calendar.component(.hour, from: overtimeStart),
+                                             minute: calendar.component(.minute, from: overtimeStart),
+                                             second: 0,
+                                             of: today)!
+        let overtimeEndToday = calendar.date(bySettingHour: calendar.component(.hour, from: overtimeEnd),
+                                           minute: calendar.component(.minute, from: overtimeEnd),
+                                           second: 0,
+                                           of: today)!
+        
+        // 如果现在在加班时间之前，返回0
+        if now < overtimeStartToday {
+            return 0
+        }
+        
+        // 如果现在在加班时间之后，返回总加班时间
+        if now > overtimeEndToday {
+            return overtimeEndToday.timeIntervalSince(overtimeStartToday)
+        }
+        
+        // 计算已加班时间
+        return now.timeIntervalSince(overtimeStartToday)
+    }
+    
+    // 计算特殊节假日加班时间（秒）
+    func calculateHolidayOvertimeSeconds(for date: Date) -> TimeInterval {
+        // 如果是工作日，返回0
+        if isWorkday(date) {
+            return 0
+        }
+        
+        // 计算全天工作时间
+        return dailyWorkSeconds
     }
 }
 

@@ -20,7 +20,11 @@ final class SalaryCalculatorTests: XCTestCase {
             workEndTime: calendar.date(from: DateComponents(hour: 18, minute: 0)) ?? testDate,
             lunchStartTime: calendar.date(from: DateComponents(hour: 12, minute: 0)),
             lunchEndTime: calendar.date(from: DateComponents(hour: 13, minute: 0)),
-            workDays: [1, 2, 3, 4, 5]
+            workDays: [1, 2, 3, 4, 5],
+            overtimeRate: 1.5,
+            overtimeStartTime: calendar.date(from: DateComponents(hour: 18, minute: 0)),
+            overtimeEndTime: calendar.date(from: DateComponents(hour: 21, minute: 0)),
+            holidayOvertimeRate: 3.0
         )
         
         // 设置测试用的节假日数据
@@ -185,5 +189,131 @@ final class SalaryCalculatorTests: XCTestCase {
         let workday = calendar.date(from: DateComponents(year: 2024, month: 3, day: 9))!
         let workdayHolidayEarnings = calculator.calculateEarnings(for: workday)
         XCTAssertGreaterThan(workdayHolidayEarnings, 0, "调休工作日收入应该大于0")
+    }
+    
+    // MARK: - 加班工资测试
+    
+    func testOvertimeEarnings() {
+        // 设置当前时间为加班时间
+        let now = calendar.date(bySettingHour: 19, minute: 0, second: 0, of: Date())!
+        
+        // 计算加班工资
+        let overtimeSeconds = config.calculateOvertimeSeconds(for: now)
+        let overtimeEarnings = overtimeSeconds * config.salaryPerSecond * config.overtimeRate
+        
+        // 验证加班时间（1小时）
+        XCTAssertEqual(overtimeSeconds, 3600)
+        
+        // 验证加班工资（应该比正常工资高1.5倍）
+        let normalHourlyRate = config.salaryPerSecond * 3600
+        XCTAssertEqual(overtimeEarnings, normalHourlyRate * 1.5)
+    }
+    
+    func testNoOvertimeEarnings() {
+        // 设置当前时间为非加班时间
+        let now = calendar.date(bySettingHour: 17, minute: 0, second: 0, of: Date())!
+        
+        // 计算加班工资
+        let overtimeSeconds = config.calculateOvertimeSeconds(for: now)
+        let overtimeEarnings = overtimeSeconds * config.salaryPerSecond * config.overtimeRate
+        
+        // 验证加班时间为0
+        XCTAssertEqual(overtimeSeconds, 0)
+        XCTAssertEqual(overtimeEarnings, 0)
+    }
+    
+    // MARK: - 特殊节假日工资测试
+    
+    func testHolidayOvertimeEarnings() {
+        // 创建一个周末日期
+        let weekend = calendar.date(from: DateComponents(year: 2024, month: 3, day: 16))!
+        
+        // 计算节假日加班工资
+        let holidaySeconds = config.calculateHolidayOvertimeSeconds(for: weekend)
+        let holidayEarnings = holidaySeconds * config.salaryPerSecond * config.holidayOvertimeRate
+        
+        // 验证节假日加班时间（应该等于全天工作时间）
+        XCTAssertEqual(holidaySeconds, config.dailyWorkSeconds)
+        
+        // 验证节假日加班工资（应该比正常工资高3倍）
+        let normalDailyRate = config.salaryPerSecond * config.dailyWorkSeconds
+        XCTAssertEqual(holidayEarnings, normalDailyRate * 3.0)
+    }
+    
+    func testNoHolidayOvertimeEarnings() {
+        // 创建一个工作日
+        let workday = calendar.date(from: DateComponents(year: 2024, month: 3, day: 15))!
+        
+        // 计算节假日加班工资
+        let holidaySeconds = config.calculateHolidayOvertimeSeconds(for: workday)
+        let holidayEarnings = holidaySeconds * config.salaryPerSecond * config.holidayOvertimeRate
+        
+        // 验证节假日加班时间为0
+        XCTAssertEqual(holidaySeconds, 0)
+        XCTAssertEqual(holidayEarnings, 0)
+    }
+    
+    // MARK: - 跨月工资测试
+    
+    func testCrossMonthEarnings() {
+        // 创建跨月的日期范围（3月15日到4月15日）
+        let startDate = calendar.date(from: DateComponents(year: 2024, month: 3, day: 15))!
+        let endDate = calendar.date(from: DateComponents(year: 2024, month: 4, day: 15))!
+        
+        // 计算跨月工资
+        let earnings = calculator.calculateCrossMonthEarnings(from: startDate, to: endDate)
+        
+        // 验证跨月工资大于0
+        XCTAssertGreaterThan(earnings, 0)
+        
+        // 验证跨月工资不超过两个月工资
+        let twoMonthsSalary = config.monthlySalary * 2
+        XCTAssertLessThanOrEqual(earnings, twoMonthsSalary)
+    }
+    
+    func testCrossMonthEarningsWithHolidays() {
+        // 创建包含节假日的跨月日期范围（4月1日到5月1日，包含劳动节）
+        let startDate = calendar.date(from: DateComponents(year: 2024, month: 4, day: 1))!
+        let endDate = calendar.date(from: DateComponents(year: 2024, month: 5, day: 1))!
+        
+        // 计算跨月工资
+        let earnings = calculator.calculateCrossMonthEarnings(from: startDate, to: endDate)
+        
+        // 验证跨月工资大于0
+        XCTAssertGreaterThan(earnings, 0)
+        
+        // 验证跨月工资不超过两个月工资
+        let twoMonthsSalary = config.monthlySalary * 2
+        XCTAssertLessThanOrEqual(earnings, twoMonthsSalary)
+    }
+    
+    // MARK: - 边界条件测试
+    
+    func testEdgeCases() {
+        // 测试午夜时间
+        let midnight = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: Date())!
+        let midnightEarnings = calculator.calculateTodayEarnings()
+        XCTAssertEqual(midnightEarnings, 0)
+        
+        // 测试工作日结束时间
+        let workEnd = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: Date())!
+        let workEndEarnings = calculator.calculateTodayEarnings()
+        XCTAssertGreaterThan(workEndEarnings, 0)
+        
+        // 测试加班开始时间
+        let overtimeStart = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: Date())!
+        let overtimeStartEarnings = calculator.calculateTodayEarnings()
+        XCTAssertEqual(overtimeStartEarnings, config.salaryPerSecond * config.dailyWorkSeconds)
+    }
+    
+    // MARK: - 性能测试
+    
+    func testPerformance() {
+        measure {
+            // 测试跨月工资计算的性能
+            let startDate = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1))!
+            let endDate = calendar.date(from: DateComponents(year: 2024, month: 12, day: 31))!
+            _ = calculator.calculateCrossMonthEarnings(from: startDate, to: endDate)
+        }
     }
 } 

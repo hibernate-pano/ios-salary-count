@@ -13,21 +13,27 @@ class SalaryCalculator {
     // 计算今日收入
     func calculateTodayEarnings() -> Double {
         let startTime = Date()
+        let now = Date()
         
         // 检查今天是否是工作日
-        if !isWorkday(Date()) {
-            return 0
+        if !isWorkday(now) {
+            // 如果是节假日，计算节假日加班工资
+            return calculateHolidayOvertimeEarnings(for: now)
         }
         
-        // 获取今天的工作时间
-        let workTime = calculateTodayWorkTime()
-        let earnings = workTime * config.salaryPerSecond
+        // 计算正常工作时间的收入
+        let normalWorkTime = calculateTodayWorkTime()
+        let normalEarnings = normalWorkTime * config.salaryPerSecond
+        
+        // 计算加班时间的收入
+        let overtimeSeconds = config.calculateOvertimeSeconds(for: now)
+        let overtimeEarnings = overtimeSeconds * config.salaryPerSecond * config.overtimeRate
         
         // 记录性能
         let duration = Date().timeIntervalSince(startTime)
         optimizer.trackPerformance(for: "calculateTodayEarnings", duration: duration)
         
-        return earnings
+        return normalEarnings + overtimeEarnings
     }
     
     // 计算本月收入
@@ -177,5 +183,75 @@ class SalaryCalculator {
         optimizer.trackPerformance(for: "isWorkday", duration: duration)
         
         return result
+    }
+    
+    // 计算节假日加班收入
+    private func calculateHolidayOvertimeEarnings(for date: Date) -> Double {
+        let overtimeSeconds = config.calculateHolidayOvertimeSeconds(for: date)
+        return overtimeSeconds * config.salaryPerSecond * config.holidayOvertimeRate
+    }
+    
+    // 计算跨月工资
+    func calculateCrossMonthEarnings(from startDate: Date, to endDate: Date) -> Double {
+        let startTime = Date()
+        let calendar = Calendar.current
+        var totalEarnings: Double = 0
+        
+        // 获取日期范围内的所有日期
+        var currentDate = startDate
+        while currentDate <= endDate {
+            if isWorkday(currentDate) {
+                // 计算正常工作时间的收入
+                let normalWorkTime = calculateWorkTime(for: currentDate)
+                let normalEarnings = normalWorkTime * config.salaryPerSecond
+                
+                // 计算加班时间的收入
+                let overtimeSeconds = config.calculateOvertimeSeconds(for: currentDate)
+                let overtimeEarnings = overtimeSeconds * config.salaryPerSecond * config.overtimeRate
+                
+                totalEarnings += normalEarnings + overtimeEarnings
+            } else {
+                // 计算节假日加班收入
+                totalEarnings += calculateHolidayOvertimeEarnings(for: currentDate)
+            }
+            
+            // 移动到下一天
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+        }
+        
+        // 记录性能
+        let duration = Date().timeIntervalSince(startTime)
+        optimizer.trackPerformance(for: "calculateCrossMonthEarnings", duration: duration)
+        
+        return totalEarnings
+    }
+    
+    // 计算指定日期的工作时间（秒）
+    private func calculateWorkTime(for date: Date) -> TimeInterval {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: date)
+        
+        // 获取工作开始和结束时间
+        let workStart = calendar.date(bySettingHour: calendar.component(.hour, from: config.workStartTime),
+                                    minute: calendar.component(.minute, from: config.workStartTime),
+                                    second: 0,
+                                    of: today)!
+        let workEnd = calendar.date(bySettingHour: calendar.component(.hour, from: config.workEndTime),
+                                  minute: calendar.component(.minute, from: config.workEndTime),
+                                  second: 0,
+                                  of: today)!
+        
+        // 如果是过去的工作日，返回全天工作时间
+        if date < Date() {
+            return config.dailyWorkSeconds
+        }
+        
+        // 如果是今天，返回已工作时间
+        if calendar.isDateInToday(date) {
+            return calculateTodayWorkTime()
+        }
+        
+        // 如果是未来的工作日，返回0
+        return 0
     }
 } 
