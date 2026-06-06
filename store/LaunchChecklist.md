@@ -82,6 +82,16 @@ targets:
 - 付费账号后 Team 换成你的付费团队 ID（Xcode 登录后自动出现），仍用自动签名
 - 归档发布时 Xcode 自动生成 Distribution profile
 
+### A5. （可选增强）iCloud 跨设备同步
+
+**现状**：配置存本地 App Group UserDefaults。更新版本不丢、整机迁移能带过去；唯一缺口是「新手机全新下载 App、没走整机备份」时配置不同步，需重填。
+
+**方案**：用 `NSUbiquitousKeyValueStore`（iCloud 键值同步），配置极小正好匹配，轻量免费。
+
+**前提**：需付费账号开启 iCloud (Key-Value storage) 能力。账号到位后告诉我，我来实现 + 模拟器验证。
+
+> 优先级：低。多数用户走整机迁移，数据本就能带过去。属于「换机零感知」的体验增强，非阻塞上架。
+
 ---
 
 ## B. App Store Connect 上架步骤
