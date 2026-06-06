@@ -97,7 +97,8 @@ struct SettingsView: View {
             set: { isOn in
                 if isOn {
                     store.config.workDays.insert(weekday)
-                } else {
+                } else if store.config.workDays.count > 1 {
+                    // 至少保留一个工作日，避免空集合导致收入恒为 0、Widget 无效空转
                     store.config.workDays.remove(weekday)
                 }
             }

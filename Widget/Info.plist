@@ -20,18 +20,10 @@
     <string>0.3</string>
     <key>CFBundleVersion</key>
     <string>3</string>
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
-    <key>UIApplicationSceneManifest</key>
+    <key>NSExtension</key>
     <dict>
-        <key>UIApplicationSupportsMultipleScenes</key>
-        <true/>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.widgetkit-extension</string>
     </dict>
-    <key>UILaunchScreen</key>
-    <dict/>
-    <key>UISupportedInterfaceOrientations</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-    </array>
 </dict>
 </plist>

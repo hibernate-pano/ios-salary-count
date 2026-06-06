@@ -15,26 +15,24 @@ struct SalaryEngine {
 
     // MARK: - 基础时长
 
-    /// 某个 Date 的「当天零点起的秒数」，只取时:分。
-    private func secondsOfDay(_ date: Date) -> TimeInterval {
-        let components = calendar.dateComponents([.hour, .minute], from: date)
-        let hour = components.hour ?? 0
-        let minute = components.minute ?? 0
-        return TimeInterval(hour * 3600 + minute * 60)
+    /// 下班相对上班的分钟跨度。
+    /// V1 不支持跨午夜班次（下班≤上班视为无效配置 → 跨度为 0，收入归零）。
+    /// 原因：跨午夜班次的"今日收入"跨两个日历日，与按日历日统计的模型不兼容。夜班支持见路线图。
+    private var workSpanMinutes: Int {
+        max(0, config.workEndMinutes - config.workStartMinutes)
     }
 
-    /// 每日有效工作秒数 = (下班 − 上班) − 午休时长。
-    var dailyWorkSeconds: TimeInterval {
-        let work = secondsOfDay(config.workEndTime) - secondsOfDay(config.workStartTime)
-        guard work > 0 else { return 0 }
+    /// 午休时长（分钟）。仅当启用且时长为正时有效。
+    private var lunchSpanMinutes: Int {
+        guard config.lunchEnabled else { return 0 }
+        let span = config.lunchEndMinutes - config.lunchStartMinutes
+        return span > 0 ? span : 0
+    }
 
-        if config.lunchEnabled {
-            let lunch = secondsOfDay(config.lunchEndTime) - secondsOfDay(config.lunchStartTime)
-            if lunch > 0 {
-                return max(0, work - lunch)
-            }
-        }
-        return work
+    /// 每日有效工作秒数 = (下班 − 上班) − 午休时长。无效配置时为 0。
+    var dailyWorkSeconds: TimeInterval {
+        let net = workSpanMinutes - lunchSpanMinutes
+        return TimeInterval(max(0, net) * 60)
     }
 
     // MARK: - 工作日计数
@@ -84,16 +82,25 @@ struct SalaryEngine {
 
     // MARK: - 今日已工作秒数
 
-    /// 把 config 里的「时:分」投影到指定日期的同一天。
-    private func timeToday(_ time: Date, on day: Date) -> Date {
+    /// 把「自午夜分钟数」投影到 `day` 当天的绝对时刻。
+    private func anchor(_ minutes: Int, on day: Date) -> Date {
         let startOfDay = calendar.startOfDay(for: day)
-        let components = calendar.dateComponents([.hour, .minute], from: time)
-        return calendar.date(
-            bySettingHour: components.hour ?? 0,
-            minute: components.minute ?? 0,
-            second: 0,
-            of: startOfDay
-        ) ?? startOfDay
+        return calendar.date(byAdding: .minute, value: minutes, to: startOfDay) ?? startOfDay
+    }
+
+    /// 今日上班的绝对起止时刻。下班≤上班为无效配置，返回零跨度窗口（收入归零）。
+    private func workWindow(on day: Date) -> (start: Date, end: Date) {
+        let start = anchor(config.workStartMinutes, on: day)
+        let end = anchor(config.workEndMinutes, on: day)
+        return end > start ? (start, end) : (start, start)
+    }
+
+    /// 今日午休的绝对起止时刻；无效午休返回 nil。
+    private func lunchWindow(on day: Date) -> (start: Date, end: Date)? {
+        guard lunchSpanMinutes > 0 else { return nil }
+        let start = anchor(config.lunchStartMinutes, on: day)
+        let end = anchor(config.lunchEndMinutes, on: day)
+        return end > start ? (start, end) : nil
     }
 
     /// 截至 `now`，今天已工作的秒数。
@@ -102,27 +109,21 @@ struct SalaryEngine {
     func secondsWorkedToday(now: Date) -> TimeInterval {
         guard isWorkday(now) else { return 0 }
 
-        let workStart = timeToday(config.workStartTime, on: now)
-        let workEnd = timeToday(config.workEndTime, on: now)
+        let (workStart, workEnd) = workWindow(on: now)
 
         if now <= workStart { return 0 }
         if now >= workEnd { return dailyWorkSeconds }
 
         var worked = now.timeIntervalSince(workStart)
 
-        if config.lunchEnabled {
-            let lunchStart = timeToday(config.lunchStartTime, on: now)
-            let lunchEnd = timeToday(config.lunchEndTime, on: now)
+        if let (lunchStart, lunchEnd) = lunchWindow(on: now) {
             let lunchDuration = lunchEnd.timeIntervalSince(lunchStart)
-
-            if lunchDuration > 0 {
-                if now >= lunchStart && now <= lunchEnd {
-                    // 午休中：只算上班到午休开始
-                    worked = lunchStart.timeIntervalSince(workStart)
-                } else if now > lunchEnd {
-                    // 午休后：扣掉整段午休
-                    worked -= lunchDuration
-                }
+            if now >= lunchStart && now <= lunchEnd {
+                // 午休中：只算上班到午休开始
+                worked = lunchStart.timeIntervalSince(workStart)
+            } else if now > lunchEnd {
+                // 午休后：扣掉整段午休
+                worked -= lunchDuration
             }
         }
 
@@ -160,5 +161,44 @@ struct SalaryEngine {
         let month = calendar.component(.month, from: now)
         let completedMonths = month - 1
         return Double(completedMonths) * config.monthlySalary + monthEarnings(now: now)
+    }
+
+    // MARK: - 工作进度与状态（Widget 用）
+
+    /// 今日工作进度比例 0...1（已工作秒数 / 每日工作秒数）。
+    func progress(now: Date) -> Double {
+        let total = dailyWorkSeconds
+        guard total > 0 else { return 0 }
+        return min(1.0, max(0, secondsWorkedToday(now: now) / total))
+    }
+
+    /// 当日工作状态。
+    enum DayState {
+        case beforeWork   // 工作日，但还没到上班时间
+        case working      // 工作日，工作中
+        case lunch        // 工作日，午休中
+        case afterWork    // 工作日，已下班
+        case dayOff       // 非工作日
+    }
+
+    /// 判断 `now` 时刻的当日状态。
+    func dayState(now: Date) -> DayState {
+        guard isWorkday(now) else { return .dayOff }
+
+        let (workStart, workEnd) = workWindow(on: now)
+
+        if now < workStart { return .beforeWork }
+        if now >= workEnd { return .afterWork }
+
+        if let (lunchStart, lunchEnd) = lunchWindow(on: now),
+           now >= lunchStart, now < lunchEnd {
+            return .lunch
+        }
+        return .working
+    }
+
+    /// 距下班还剩的有效工作秒数（已扣午休）。下班后为 0。
+    func remainingWorkSeconds(now: Date) -> TimeInterval {
+        max(0, dailyWorkSeconds - secondsWorkedToday(now: now))
     }
 }

@@ -150,4 +150,84 @@ final class SalaryEngineTests: XCTestCase {
         XCTAssertEqual(engine.dailySalary(now: now), 0, "无工作日时日工资应为0而非崩溃")
         XCTAssertEqual(engine.todayEarnings(now: now), 0)
     }
+
+    // MARK: - 跨午夜班次（V1 不支持，应安全归零而非算错）
+
+    /// 22:00 上班、次日 06:00 下班——V1 视为无效配置（下班≤上班）。
+    private func makeNightShift() -> SalaryConfig {
+        SalaryConfig(
+            monthlySalary: 6000,
+            workStartMinutes: 22 * 60,
+            workEndMinutes: 6 * 60,
+            lunchEnabled: false,
+            workDays: [1, 2, 3, 4, 5, 6, 7]
+        )
+    }
+
+    func testOvernightShift_treatedAsZeroNotMiscalculated() {
+        let engine = SalaryEngine(config: makeNightShift(), calendar: calendar)
+        // V1 明确不支持跨午夜：安全归零，不误导金额（夜班支持见路线图）
+        XCTAssertEqual(engine.dailyWorkSeconds, 0, "跨午夜班次 V1 不支持，应归零而非算出错误工时")
+        XCTAssertEqual(engine.salaryPerSecond(now: date(2024, 3, 13, 2, 0)), 0)
+    }
+
+    func testOvernightShift_earningsAreZero() {
+        let engine = SalaryEngine(config: makeNightShift(), calendar: calendar)
+        let now = date(2024, 3, 13, 2, 0)
+        XCTAssertEqual(engine.todayEarnings(now: now), 0, "无效班次不产生收入，避免误导")
+    }
+
+    // MARK: - 状态机
+
+    func testDayState_allStates() {
+        let engine = SalaryEngine(config: makeConfig(), calendar: calendar)
+        XCTAssertEqual(engine.dayState(now: date(2024, 3, 13, 8, 0)), .beforeWork)
+        XCTAssertEqual(engine.dayState(now: date(2024, 3, 13, 10, 0)), .working)
+        XCTAssertEqual(engine.dayState(now: date(2024, 3, 13, 12, 30)), .lunch)
+        XCTAssertEqual(engine.dayState(now: date(2024, 3, 13, 20, 0)), .afterWork)
+        XCTAssertEqual(engine.dayState(now: date(2024, 3, 16, 10, 0)), .dayOff, "周六应是休息日")
+    }
+
+    // MARK: - 进度与金额一致性
+
+    func testProgress_matchesEarningsRatio() {
+        let engine = SalaryEngine(config: makeConfig(), calendar: calendar)
+        let now = date(2024, 3, 13, 14, 0) // 下午2点，已工作4小时/共8小时 = 0.5
+        XCTAssertEqual(engine.progress(now: now), 0.5, accuracy: 0.001)
+        // 已赚 应 = 进度 × 预计今日总额
+        let expected = engine.progress(now: now) * engine.dailySalary(now: now)
+        XCTAssertEqual(engine.todayEarnings(now: now), expected, accuracy: 1e-6)
+    }
+
+    func testProgress_clampedTo1AfterWork() {
+        let engine = SalaryEngine(config: makeConfig(), calendar: calendar)
+        XCTAssertEqual(engine.progress(now: date(2024, 3, 13, 20, 0)), 1.0)
+    }
+
+    // MARK: - 时区无关性（修复 #2）
+
+    /// 同一份配置（分钟制）在不同时区解读出的工时应一致。
+    func testTimezoneIndependence_dailyWorkSecondsStable() {
+        let config = makeConfig()
+        var tokyo = Calendar(identifier: .gregorian)
+        tokyo.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        var newYork = Calendar(identifier: .gregorian)
+        newYork.timeZone = TimeZone(identifier: "America/New_York")!
+
+        let e1 = SalaryEngine(config: config, calendar: tokyo)
+        let e2 = SalaryEngine(config: config, calendar: newYork)
+        XCTAssertEqual(e1.dailyWorkSeconds, e2.dailyWorkSeconds, "工时不应随时区漂移")
+        XCTAssertEqual(e1.dailyWorkSeconds, 8 * 3600)
+    }
+
+    // MARK: - Codable（分钟制持久化）
+
+    func testConfigCodableRoundtrip() throws {
+        let config = makeConfig(monthlySalary: 12345)
+        let data = try JSONEncoder().encode(config)
+        let decoded = try JSONDecoder().decode(SalaryConfig.self, from: data)
+        XCTAssertEqual(config, decoded)
+        XCTAssertEqual(decoded.workStartMinutes, 9 * 60)
+        XCTAssertEqual(decoded.workEndMinutes, 18 * 60)
+    }
 }

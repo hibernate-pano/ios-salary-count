@@ -7,10 +7,15 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.2"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.3"
+    CURRENT_PROJECT_VERSION: "3"
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: NO
+    # 模拟器用 ad-hoc 签名即可应用 entitlements（App Group 必需）。
+    # 真机部署时改为你的开发团队自动签名。
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGNING_ALLOWED: YES
 
 targets:
   SalaryCount:
@@ -24,10 +29,30 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount
         PRODUCT_NAME: SalaryCount
         INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/SalaryCount.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
-        CODE_SIGNING_ALLOWED: NO
+    dependencies:
+      - target: SalaryWidgetExtension
+
+  SalaryWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      # Widget 自身代码
+      - path: Widget
+      # 共享的纯逻辑（引擎/模型/存储约定），App 与 Widget 都用
+      - path: Sources/Engine
+      - path: Sources/Models
+      - path: Sources/Store/AppGroup.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount.widget
+        PRODUCT_NAME: SalaryWidgetExtension
+        INFOPLIST_FILE: Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Widget/SalaryWidget.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
 
   SalaryCountTests:
     type: bundle.unit-test
@@ -46,6 +71,7 @@ schemes:
     build:
       targets:
         SalaryCount: all
+        SalaryWidgetExtension: all
         SalaryCountTests: [test]
     test:
       targets:
