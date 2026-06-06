@@ -1,196 +1,83 @@
-# iOS 工资计算小组件 (iOS Salary Widget)
+# 工资计算器 (SalaryCount)
 
-一个简单而实用的 iOS 桌面小组件，帮助用户实时追踪他们的工作收入。
+一个 iOS App，实时显示你的工作收入——打开就能看到今天赚的钱一秒一秒往上涨。
 
-## 功能特点
+## 当前状态：V1 可运行骨架 ✅
 
-### 核心功能
-- 实时计算每秒工资收入
-- 支持自定义月薪和工作时间设置
-- 智能识别工作日和工作时间
-- 多维度收入统计展示
-- 自动同步国家法定节假日
+干净重写的最小可用版本，已在 iPhone 模拟器上验证通过：
 
-### 数据展示
-- 今日收入统计
-- 本月累计收入
-- 年度累计收入
-- 实时每秒收入
+- 实时跳动的「今日已赚」（每秒刷新）
+- 本月累计、年度累计收入
+- 设置：月薪、上下班时间、午休开关、工作日选择
+- 配置本地持久化，深浅色自动跟随系统
+- 16 个引擎单元测试全部通过
 
-### 个性化设置
-- 自定义月薪金额
-- 设置工作时间（默认 9:00-18:00）
-- 设置午休时间（可选）
-- 选择工作日（默认周一至周五）
+## 技术栈
 
-### 小组件设计
-- 支持小、中、大三种尺寸
-  - 小尺寸：显示今日实时收入
-  - 中尺寸：显示今日和本月累计收入
-  - 大尺寸：显示今日、本月和年度累计收入
-- 支持深色/浅色模式自动切换
-- 简洁现代的界面设计
-
-## 技术实现
-
-### 开发环境
-- iOS 16.0+
-- SwiftUI
-- WidgetKit
-- SwiftData (用于数据持久化)
-
-### 核心算法
-1. 日工资计算
-   ```
-   日工资 = 月薪 ÷ 当月工作日数
-   ```
-
-2. 每秒工资计算
-   ```
-   每秒工资 = 日工资 ÷ (每日工作秒数 - 午休秒数)
-   ```
-
-3. 实时收入计算
-   ```
-   当前收入 = 每秒工资 × 已工作秒数
-   ```
-
-### 数据存储
-- 使用 SwiftData 存储用户配置
-- 本地缓存节假日信息
-- 自动同步国家法定节假日数据
+- SwiftUI，iOS 16.0+
+- 工程用 [XcodeGen](https://github.com/yonomi/xcodegen) 从 `project.yml` 生成（可重建、可进 git）
+- 配置持久化：Codable + UserDefaults
+- 计算引擎为纯函数，便于测试
 
 ## 项目结构
+
 ```
 ios-salary-count/
+├── project.yml                  # XcodeGen 工程配置
+├── App/
+│   ├── SalaryCountApp.swift      # @main 入口 + TabView
+│   ├── Info.plist
+│   └── Assets.xcassets/          # AppIcon + AccentColor
 ├── Sources/
-│   └── ios-salary-count/
-│       ├── Widget/
-│       │   ├── SalaryWidget.swift
-│       │   ├── SalaryWidgetBundle.swift
-│       │   └── WidgetViews/
-│       │       ├── SmallWidgetView.swift
-│       │       ├── MediumWidgetView.swift
-│       │       └── LargeWidgetView.swift
-│       ├── Models/
-│       │   ├── SalaryConfig.swift
-│       │   ├── WorkTimeConfig.swift
-│       │   └── HolidayConfig.swift
-│       ├── Views/
-│       │   ├── ConfigView.swift
-│       │   └── WidgetView.swift
-│       ├── Utils/
-│       │   ├── SalaryCalculator.swift
-│       │   ├── WorkDayHelper.swift
-│       │   └── HolidayHelper.swift
-│       ├── SalaryApp.swift
-│       └── Info.plist
-├── Tests/
-├── Package.swift
-└── README.md
+│   ├── Models/SalaryConfig.swift # 配置（值类型）
+│   ├── Engine/SalaryEngine.swift # 计算引擎（纯函数）
+│   ├── Store/SalaryStore.swift   # 状态管理 + 1秒 Timer + 持久化
+│   └── Views/
+│       ├── HomeView.swift        # 实时收入主页
+│       └── SettingsView.swift    # 设置
+└── Tests/SalaryEngineTests.swift
 ```
 
-## 系统要求
+## 计算逻辑
 
-- iOS 16.0+
-- Xcode 15.0+
-- Swift 5.9+
+```
+日工资   = 月薪 ÷ 当月工作日数
+每秒工资 = 日工资 ÷ 每日有效工作秒数（已扣午休）
+今日收入 = 已工作秒数 × 每秒工资
+本月收入 = 本月已完成工作日 × 日工资 + 今日收入
+年度收入 = 已过完整月份 × 月薪 + 本月收入
+```
 
-## 安装说明
+> weekday 约定与 Apple Calendar 一致：1=周日 … 7=周六，默认工作日为周一到周五 `[2,3,4,5,6]`。
 
-1. 克隆项目到本地
-2. 使用 Xcode 打开项目
-3. 选择目标设备或模拟器
-4. 点击运行按钮
+## 如何运行
 
-## 使用说明
+```bash
+# 1. 安装 XcodeGen（首次）
+brew install xcodegen
 
-1. 在设置页面配置你的月薪和工作时间
-2. 在主屏幕添加小组件
-3. 选择合适的小组件尺寸
-4. 实时查看你的工作收入
+# 2. 生成 Xcode 工程
+xcodegen generate
 
-## 开发计划
+# 3. 用 Xcode 打开，选模拟器运行
+open SalaryCount.xcodeproj
 
-### 第一阶段：基础功能实现
-- [x] 项目初始化
-- [x] 基础 UI 框架搭建
-- [x] 工资计算核心逻辑实现
-- [x] 小组件开发
-- [x] 数据持久化
+# 或命令行编译 + 测试
+xcodebuild -project SalaryCount.xcodeproj -scheme SalaryCount \
+  -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
 
-### 第二阶段：核心功能完善
-- [x] 工资计算核心逻辑
-- [x] 工作日配置
-- [x] 工作时间设置
-- [x] 午休时间配置
-- [ ] 加班工资计算
-- [ ] 特殊节假日工资计算
-- [ ] 跨月工资计算
+## 路线图
 
-### 第三阶段：数据安全与备份
-- [ ] 数据加密存储
-- [ ] 敏感信息保护
-- [ ] 数据备份机制
-- [ ] 数据恢复功能
-- [ ] 数据迁移方案
-- [ ] 数据验证机制
-- [ ] iCloud 同步支持
-  - [ ] iCloud 配置与权限设置
-  - [ ] 数据同步冲突处理
-  - [ ] 离线数据缓存
-  - [ ] 同步状态监控
-  - [ ] 同步失败重试机制
-  - [ ] 数据一致性检查
+V1 已落地的是地基。后续按优先级逐步叠加，每步都保持可运行、可测试：
 
-### 第四阶段：节假日功能
-- [ ] 节假日数据同步
-- [ ] 节假日数据验证
-- [ ] 同步失败重试机制
-- [ ] 网络超时处理
-- [ ] 节假日缓存优化
-- [ ] 调休工作日处理
-
-### 第五阶段：性能优化
-- [ ] 数据加载优化
-- [ ] 计算性能优化
-- [ ] 内存管理优化
-- [ ] 小组件刷新优化
-- [ ] 后台任务优化
-- [ ] 电池消耗优化
-
-### 第六阶段：用户体验
-- [ ] 深色/浅色模式支持
-- [ ] 多语言支持
-- [ ] 用户引导流程
-- [ ] 错误提示优化
-- [ ] 操作反馈优化
-- [ ] 界面动画优化
-
-### 第七阶段：测试与质量
-- [ ] 单元测试编写
-- [ ] UI 测试编写
-- [ ] 性能测试
-- [ ] 内存泄漏检测
-- [ ] 崩溃监控
-- [ ] 兼容性测试
-
-### 第八阶段：发布准备
-- [ ] App Store 发布材料准备
-- [ ] 应用截图制作
-- [ ] 应用描述编写
-- [ ] 关键词优化
-- [ ] 隐私政策更新
-- [ ] 用户协议编写
-
-## 贡献指南
-
-1. Fork 本仓库
-2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的改动 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启一个 Pull Request
+- [ ] 桌面小组件（受系统刷新节流，显示慢更新快照而非逐秒）
+- [ ] 中国法定节假日 / 调休（内置数据，不依赖第三方 API）
+- [ ] 加班工资、特殊节假日工资
+- [ ] iCloud 同步
+- [ ] 多语言、用户引导
+- [ ] App Store 上架材料（截图、描述、隐私政策）
 
 ## 许可证
 
-MIT License 
+MIT License

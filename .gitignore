@@ -1,0 +1,15 @@
+.DS_Store
+.vscode
+.env
+.env.local
+.env.development
+.env.production
+.swiftpm/
+
+# Swift / Xcode 构建产物
+.build/
+build/
+DerivedData/
+
+# XcodeGen 生成的工程（可由 project.yml 重建）
+*.xcodeproj/
