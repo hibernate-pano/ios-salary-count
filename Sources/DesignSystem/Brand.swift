@@ -39,6 +39,30 @@ enum Brand {
         endPoint: .trailing
     )
 
+    // MARK: - 财富主题（小组件：深底 + 金色金额）
+
+    /// 小组件深色背景渐变（深蓝黑，让金色数字发光）。
+    static let widgetDarkBackground = LinearGradient(
+        colors: [Color(red: 0.13, green: 0.15, blue: 0.20),
+                 Color(red: 0.07, green: 0.08, blue: 0.12)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// 金色金额渐变（亮金→暖金，金额主角专用）。
+    static let goldGradient = LinearGradient(
+        colors: [Color(red: 1.0, green: 0.88, blue: 0.55),
+                 Color(red: 0.96, green: 0.72, blue: 0.30)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
+    /// 金色（单色，用于 ¥ 符号、辅助元素）。
+    static let gold = Color(red: 0.96, green: 0.72, blue: 0.30)
+
+    /// 上涨绿（涨幅徽章、增长提示）。
+    static let gain = Color(red: 0.25, green: 0.92, blue: 0.55)
+
     /// 根据「是否工作日」选择主渐变。
     static func heroGradient(isWorkday: Bool) -> LinearGradient {
         isWorkday ? heroGradient : restGradient

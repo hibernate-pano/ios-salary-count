@@ -7,8 +7,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.5"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "0.6"
+    CURRENT_PROJECT_VERSION: "7"
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: NO
     # 模拟器用 ad-hoc 签名即可应用 entitlements（App Group 必需）。
