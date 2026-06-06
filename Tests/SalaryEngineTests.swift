@@ -262,4 +262,44 @@ final class SalaryEngineTests: XCTestCase {
         let decoded = try JSONDecoder().decode(HolidayConfig.self, from: data)
         XCTAssertEqual(h, decoded)
     }
+
+    // MARK: - 2026 内置真实数据
+
+    /// 用上海时区日历构造引擎，与 HolidayData 内部时区一致。
+    private func engine2026() -> SalaryEngine {
+        SalaryEngine(config: makeConfig(), holidays: HolidayData.holidays(year: 2026), calendar: calendar)
+    }
+
+    func testData2026_springFestivalNotWorkday() {
+        let engine = engine2026()
+        // 2026-02-16 周一，春节假期 → 不计薪
+        XCTAssertFalse(engine.isWorkday(date(2026, 2, 16)), "春节假期不应是工作日")
+        XCTAssertEqual(engine.todayEarnings(now: date(2026, 2, 16, 14, 0)), 0)
+    }
+
+    func testData2026_makeupWorkdayCounts() {
+        let engine = engine2026()
+        // 2026-02-28 周六，春节调休补班 → 计薪
+        XCTAssertTrue(engine.isWorkday(date(2026, 2, 28)), "2/28 调休补班应是工作日")
+        XCTAssertGreaterThan(engine.todayEarnings(now: date(2026, 2, 28, 20, 0)), 0)
+        // 2026-10-10 周六，国庆调休补班
+        XCTAssertTrue(engine.isWorkday(date(2026, 10, 10)), "10/10 调休补班应是工作日")
+    }
+
+    func testData2026_nationalDayHoliday() {
+        let engine = engine2026()
+        // 2026-10-01 周四，国庆 → 不计薪
+        XCTAssertFalse(engine.isWorkday(date(2026, 10, 1)), "国庆假期不应是工作日")
+    }
+
+    func testData2026_normalWorkdayUnaffected() {
+        let engine = engine2026()
+        // 2026-03-04 周三，普通工作日 → 正常计薪
+        XCTAssertTrue(engine.isWorkday(date(2026, 3, 4)))
+        XCTAssertGreaterThan(engine.todayEarnings(now: date(2026, 3, 4, 20, 0)), 0)
+    }
+
+    func testData2026_unknownYearIsEmpty() {
+        XCTAssertTrue(HolidayData.holidays(year: 2099).isEmpty, "无数据年份应返回空，退化为按星期几")
+    }
 }

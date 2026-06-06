@@ -25,15 +25,18 @@ final class SalaryStore: ObservableObject {
 
     // MARK: - 计算
 
-    /// 基于当前配置和时刻构造引擎。
+    /// 基于当前配置、节假日和时刻构造引擎。
     var engine: SalaryEngine {
-        SalaryEngine(config: config)
+        SalaryEngine(config: config, holidays: HolidayData.currentYear(now: now))
     }
 
     var todayEarnings: Double { engine.todayEarnings(now: now) }
     var monthEarnings: Double { engine.monthEarnings(now: now) }
     var yearEarnings: Double { engine.yearEarnings(now: now) }
     var isWorkdayToday: Bool { engine.isWorkday(now) }
+
+    /// 今天匹配的节假日名（如「春节」「国庆调休」）；普通日返回 nil。
+    var todayHolidayName: String? { engine.holidayName(for: now) }
 
     // MARK: - 计时器
 

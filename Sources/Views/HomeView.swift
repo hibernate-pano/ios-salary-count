@@ -43,12 +43,28 @@ struct HomeView: View {
 
     private var statusBadge: some View {
         HStack(spacing: 6) {
-            Image(systemName: store.isWorkdayToday ? "briefcase.fill" : "cup.and.saucer.fill")
-            Text(store.isWorkdayToday ? "今天是工作日" : "今天是休息日")
+            Image(systemName: statusIcon)
+            Text(statusText)
         }
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 状态图标：补班/工作日用公文包，节假日用日历，普通休息日用咖啡杯。
+    private var statusIcon: String {
+        if store.todayHolidayName != nil {
+            return store.isWorkdayToday ? "briefcase.fill" : "calendar"
+        }
+        return store.isWorkdayToday ? "briefcase.fill" : "cup.and.saucer.fill"
+    }
+
+    /// 状态文案：节假日显示节日名，让用户明白今天为何不计薪。
+    private var statusText: String {
+        if let name = store.todayHolidayName {
+            return store.isWorkdayToday ? "\(name) · 今天上班" : "\(name) · 放假"
+        }
+        return store.isWorkdayToday ? "今天是工作日" : "今天是休息日"
     }
 
     private var todayHero: some View {

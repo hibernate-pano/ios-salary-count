@@ -21,7 +21,7 @@ struct SalaryEntry: TimelineEntry {
 
     /// 从配置和指定时刻构造一个 entry。
     static func make(config: SalaryConfig, at date: Date, isConfigured: Bool = true) -> SalaryEntry {
-        let engine = SalaryEngine(config: config)
+        let engine = SalaryEngine(config: config, holidays: HolidayData.currentYear(now: date))
         let cal = Calendar.current
         let startOfDay = cal.startOfDay(for: date)
         func anchor(_ minutes: Int) -> Date {
@@ -70,8 +70,8 @@ struct SalaryProvider: TimelineProvider {
             return
         }
 
-        let engine = SalaryEngine(config: config)
         let now = Date()
+        let engine = SalaryEngine(config: config, holidays: HolidayData.currentYear(now: now))
         let cal = Calendar.current
         let nextMidnight = cal.startOfDay(for: cal.date(byAdding: .day, value: 1, to: now) ?? now)
 

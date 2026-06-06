@@ -22,12 +22,18 @@ V2「实时工资计数器 + 桌面小组件」已完成并验证通过，可在
 - 经 dynamic workflow 设计探索 + 多维度对抗性评审，修复 7 项确认问题
 - 单测扩充至 23 个
 
-### V2.1：汲取孪生项目理念（进行中）
+### V2.1：汲取孪生项目理念（tag v0.3.1）
 从同源项目 `salary-calculator` 汲取四项理念，按本项目架构（不引入 SwiftData）重新实现：
 - 首次启动引导页 `OnboardingView`（3 页，UserDefaults 标记）
 - 节假日接口雏形：`HolidayConfig`（Codable 值类型）+ `SalaryEngine.isWorkday(holidays:)`，判定优先级 调休补班 > 法定节假日 > 按星期几
 - UI 测试 target（引导页→主界面/设置页走查 + 截图）
 - memory-bank 文档体系
+
+### V2.2：接入法定节假日数据（进行中）
+- `HolidayData` 内置 2026 全年法定节假日 + 调休数据（来源：国务院办公厅通知）
+- 数据流接入：`SalaryStore.engine` 和 Widget `SalaryEntry.make` 均带入当年节假日
+- 主界面状态条显示节日名（如「春节 · 放假」「国庆调休 · 今天上班」），让用户明白为何不计薪
+- 测试扩充至 32 单测 + 2 UI 测试（含 2026 春节/国庆/调休真实日期验证）
 
 ## 编译路径（App target）
 

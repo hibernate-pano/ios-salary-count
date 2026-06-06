@@ -67,6 +67,11 @@ struct SalaryEngine {
         return config.workDays.contains(weekday)
     }
 
+    /// 当天匹配的节假日名（如「春节」「国庆调休」）；非节假日返回 nil。
+    func holidayName(for date: Date) -> String? {
+        holidays.first { calendar.isDate($0.date, inSameDayAs: date) }?.name
+    }
+
     // MARK: - 工资单价
 
     /// 指定月份的日工资 = 月薪 / 当月工作日数。
