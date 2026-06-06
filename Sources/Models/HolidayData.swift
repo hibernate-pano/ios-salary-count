@@ -8,6 +8,9 @@ import Foundation
 /// 维护：每年国务院 12 月左右发布次年安排，届时在此补充新年份数据。
 enum HolidayData {
 
+    /// 已内置数据的年份集合。新增年份数据时同步更新此处。
+    static let supportedYears: Set<Int> = [2026]
+
     /// 取指定年份的节假日数据；无数据返回空数组（退化为按星期几判断）。
     static func holidays(year: Int) -> [HolidayConfig] {
         switch year {
@@ -19,6 +22,17 @@ enum HolidayData {
     /// 当前年份的节假日数据。
     static func currentYear(calendar: Calendar = .current, now: Date = Date()) -> [HolidayConfig] {
         holidays(year: calendar.component(.year, from: now))
+    }
+
+    /// 指定年份是否已内置法定节假日数据。
+    /// false 时工作日判断退化为「按星期几」，节假日/调休会算错——UI 应提示用户。
+    static func hasData(year: Int) -> Bool {
+        supportedYears.contains(year)
+    }
+
+    /// 当前年份是否已内置节假日数据。
+    static func hasDataForCurrentYear(calendar: Calendar = .current, now: Date = Date()) -> Bool {
+        hasData(year: calendar.component(.year, from: now))
     }
 
     // MARK: - 2026

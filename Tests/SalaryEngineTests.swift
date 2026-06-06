@@ -355,4 +355,54 @@ final class SalaryEngineTests: XCTestCase {
         let decoded = try JSONDecoder().decode(SalaryConfig.self, from: data)
         XCTAssertEqual(decoded.earningMode, .allDay)
     }
+
+    // MARK: - 节假日数据覆盖（跨年防退化）
+
+    func testHolidayData_2026_hasData() {
+        XCTAssertTrue(HolidayData.hasData(year: 2026), "2026 应已内置节假日数据")
+    }
+
+    func testHolidayData_2027_missing() {
+        XCTAssertFalse(HolidayData.hasData(year: 2027), "2027 未内置，应报告缺失以便 UI 提示")
+    }
+
+    func testHolidayData_supportedYearsMatchesHolidays() {
+        // supportedYears 与实际有数据的年份必须一致，否则提示会撒谎。
+        for year in HolidayData.supportedYears {
+            XCTAssertFalse(HolidayData.holidays(year: year).isEmpty,
+                           "\(year) 声明已支持但数据为空")
+        }
+    }
+
+    // MARK: - 实物换算（上瘾钩子）
+
+    func testMoneyEquivalent_tooSmall_returnsNil() {
+        // 不足一杯奶茶（18 元）不显示，避免「0 杯」。
+        XCTAssertNil(MoneyEquivalent.describe(5))
+        XCTAssertNil(MoneyEquivalent.describe(0))
+    }
+
+    func testMoneyEquivalent_picksMostExpensiveReasonableItem() {
+        // 选「数量 1...99 的最贵实物」：54 元 → 1 场电影（50/场），而非 3 杯奶茶。
+        let result = MoneyEquivalent.describe(54)
+        XCTAssertEqual(result?.text, "≈ 1 场电影")
+    }
+
+    func testMoneyEquivalent_milkTeaWhenOnlyMilkTeaFits() {
+        // 18...29 元只够奶茶（不足一顿外卖 30）。
+        let result = MoneyEquivalent.describe(20)
+        XCTAssertEqual(result?.text, "≈ 1 杯奶茶")
+    }
+
+    func testMoneyEquivalent_largeAmount_usesExpensiveItem() {
+        // 大额时选更贵的实物，避免「2000 杯奶茶」这类夸张数字。
+        let result = MoneyEquivalent.describe(3000)
+        XCTAssertEqual(result?.text, "≈ 20 顿火锅") // 3000/150 = 20
+    }
+
+    func testMoneyEquivalent_hugeAmount_fallsBackToMostExpensive() {
+        // 金额极大（所有实物数量都 >99）：用最贵实物兜底，不退回奶茶。
+        let result = MoneyEquivalent.describe(50000)
+        XCTAssertEqual(result?.icon, "flame.fill") // 火锅，而非奶茶
+    }
 }

@@ -86,12 +86,15 @@ xcodebuild -project SalaryCount.xcodeproj -scheme SalaryCount \
 - [x] 桌面小组件（进度环 + App Group 共享，慢更新真实快照）
 - [x] 首次启动引导页
 - [x] 中国法定节假日 / 调休（2026 内置数据，不依赖第三方 API）
+- [x] 分享战绩卡（ImageRenderer 渲染 + ShareLink，获客/分享）
+- [x] 上瘾钩子（下班倒计时 + 实物换算）
+- [x] 节假日数据跨年防退化（缺数据时主页提示，不静默算错）
+- [ ] 上架材料（截图、描述、隐私政策、ASO 关键词）
 - [ ] 节假日数据扩充（逐年补充 2027+）
 - [ ] 加班工资、特殊节假日工资
 - [ ] 跨午夜班次支持（夜班，需重构「日」的语义）
 - [ ] iCloud 同步
 - [ ] 多语言
-- [ ] App Store 上架材料（截图、描述、隐私政策）
 
 > 真机部署提示：App Group（`group.com.jasper.salarycount`）需在 Apple 开发者账号开启该能力，并将两个 target 改为你的团队自动签名。模拟器无需此步。
 

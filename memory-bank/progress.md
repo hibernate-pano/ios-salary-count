@@ -68,6 +68,14 @@ V2「实时工资计数器 + 桌面小组件」已完成并验证通过，可在
 - Codable 向后兼容（旧存档无 earningMode 默认工作时段）
 - 40 单测通过（新增 8 个全天模式 + 此前体验改动）
 
+### V3.0：上架赚钱方向转向（进行中）
+定位确认：本产品是**情绪消费品（摸鱼爽感）**，非 HR 工具。收益只来自「免费走量 → 分享传播 → 留存」，故砍掉加班/税费/iCloud 等「工具完整度」功能，优先做获客与留存。
+- **分享战绩卡**（获客 + 过审核心）：`ShareCardView`（4:5 竖版主题渐变卡，金额主角 + 摸鱼梗 + App 水印）+ `ShareCardRenderer`（ImageRenderer 渲染成 PNG）+ `ShareCardSheet`（预览 + ShareLink）。收入页右上角「晒一晒」入口。冻结金额快照保证预览与分享图一致。
+- **上瘾钩子**（留存）：hero 卡工作中显示下班倒计时（盯着摸鱼的回访动机）+ 实物换算「≈ N 顿火锅」（`MoneyEquivalent` 纯函数，选「数量1...99 的最贵实物」，极大额用最贵兜底）。
+- **修技术雷**：① 节假日跨年——`HolidayData.supportedYears`/`hasData`，缺当年数据时主页橙色横幅提示「按星期几估算可能有偏差」，不再 2027 起静默算错；② Widget 刷新防抖——`reloadAllTimelines` 改 0.6s DispatchWorkItem 防抖，拖 DatePicker 不烧刷新预算。
+- 50 单测通过（新增分享卡渲染 2 + 实物换算 5 + 节假日覆盖 3）。
+- **下一步等账号**：上架材料（隐私政策、截图、ASO 关键词「摸鱼/时薪/上班赚钱」）。需个人开发者账号 ¥688/年。注意 Guideline 4.2「最低功能」过审风险——分享/钩子同时是过审筹码。
+
 ## 编译路径（App target）
 
 ```
@@ -80,19 +88,26 @@ Sources/Store/SalaryStore.swift
 Sources/Store/AppGroup.swift
 Sources/Views/HomeView.swift
 Sources/Views/SettingsView.swift
+Sources/Views/ShareCardView.swift      # 分享战绩卡（脱离环境独立渲染）
+Sources/Views/ShareCardRenderer.swift  # ImageRenderer → PNG/UIImage
+Sources/Views/ShareCardSheet.swift     # 卡片预览 + ShareLink
 ```
 Widget target 另含 Widget/ 下文件 + 共享的 Engine/Models/AppGroup。
 
 ## 已知限制
 
-- 节假日按「星期几」判断，接口已留但未接入法定节假日/调休数据
-- 无加班、税费计算
+- 节假日数据仅内置 2026；缺当年数据时退化为按星期几（已有主页提示，非静默）
+- 无加班、税费计算（已主动砍出范围：情绪消费品不靠功能完整度）
 - 不支持跨午夜班次（安全归零）
 - Widget 受系统刷新节流，非逐秒（设计上以真实快照 + 进度推进诚实表达）
 
-## 下一步（V3 候选）
+## 下一步
 
-按优先级：接入法定节假日数据（接口已就绪）→ 加班/税费 → 统计图表 → iCloud 同步 → App Store 上架材料。
+定位为情绪消费品，优先级 = 获客 > 留存 > 工具完整度：
+1. **上架材料**（等开发者账号）：隐私政策、截图、ASO 关键词。Guideline 4.2 过审风险——分享/钩子是筹码。
+2. 留存增强：连续打卡、Widget 也加倒计时/换算。
+3. 分享传播增强：年度摸鱼报告、更多梗文案。
+4. （远期、低优先）节假日逐年扩充、加班/税费。
 
 ## 真机部署提示
 

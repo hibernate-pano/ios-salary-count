@@ -24,10 +24,16 @@ struct HomeView: View {
     @EnvironmentObject private var store: SalaryStore
     @Environment(\.brand) private var brand
 
+    /// 控制分享卡片 sheet 的展示。
+    @State private var showShareSheet = false
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    if store.isHolidayDataMissing {
+                        holidayDataBanner
+                    }
                     todayHero
                     HStack(spacing: 14) {
                         StatCard(title: "本月累计", icon: "calendar", amount: store.monthEarnings)
@@ -39,6 +45,25 @@ struct HomeView: View {
             }
             .navigationTitle("我的收入")
             .background(Color(.systemGroupedBackground))
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Label("晒一晒", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+            .sheet(isPresented: $showShareSheet) {
+                ShareCardSheet(
+                    todayEarnings: store.todayEarnings,
+                    monthEarnings: store.monthEarnings,
+                    yearEarnings: store.yearEarnings,
+                    isWorkday: store.isWorkdayToday,
+                    brand: brand
+                )
+                .presentationDetents([.large])
+            }
         }
     }
 
@@ -84,6 +109,9 @@ struct HomeView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
                 .background(.white.opacity(0.18), in: Capsule())
+
+                // 下班倒计时 + 实物换算（上瘾钩子）
+                hookRow
             } else {
                 HStack(spacing: 5) {
                     Image(systemName: "cup.and.saucer.fill")
@@ -104,6 +132,32 @@ struct HomeView: View {
         .clipShape(RoundedRectangle(cornerRadius: Brand.cornerLarge))
         .shadow(color: brand.primary.opacity(store.isWorkdayToday ? 0.28 : 0.0), radius: 16, y: 8)
         .shadow(color: Brand.accentWarm.opacity(store.isWorkdayToday ? 0.0 : 0.22), radius: 16, y: 8)
+    }
+
+    /// 上瘾钩子行：下班倒计时（盯着摸鱼）+ 实物换算（具象爽感）。
+    @ViewBuilder
+    private var hookRow: some View {
+        VStack(spacing: 8) {
+            if let countdown = store.clockOffCountdown {
+                HStack(spacing: 6) {
+                    Image(systemName: "hourglass")
+                        .font(.caption2.weight(.bold))
+                    Text("距下班还有 \(countdown)")
+                        .font(.footnote.weight(.medium))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(.white.opacity(0.95))
+            }
+            if let eq = store.earningsEquivalent {
+                HStack(spacing: 6) {
+                    Image(systemName: eq.icon)
+                        .font(.caption2)
+                    Text(eq.text)
+                        .font(.footnote.weight(.medium))
+                }
+                .foregroundStyle(.white.opacity(0.9))
+            }
+        }
     }
 
     /// 状态图标：补班/工作日用公文包，节假日用日历，普通休息日用咖啡杯。
@@ -128,6 +182,28 @@ struct HomeView: View {
             return "\(name)快乐 · 好好休息"
         }
         return "今天不上班 · 好好歇着"
+    }
+
+    // MARK: - 节假日数据缺失横幅
+
+    /// 当年法定节假日数据未内置时的提示。诚实告知用户：节假日/调休按星期几估算，可能不准。
+    private var holidayDataBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.footnote)
+                .foregroundStyle(Brand.accentWarm)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("今年节假日数据待更新")
+                    .font(.subheadline.weight(.semibold))
+                Text("节假日和调休暂按星期几估算，数字可能有偏差")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(Brand.accentWarm.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: Brand.cornerMedium))
     }
 }
 

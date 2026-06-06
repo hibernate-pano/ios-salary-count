@@ -233,3 +233,36 @@ struct SalaryEngine {
         max(0, dailyWorkSeconds - secondsWorkedToday(now: now))
     }
 }
+
+// MARK: - 实物换算（上瘾钩子：把抽象金额变具象爽感）
+
+/// 把金额换算成日常实物，制造「赚了多少」的直观感。
+enum MoneyEquivalent {
+
+    /// 一个换算项：图标、单位名、单价（元）。
+    struct Item {
+        let icon: String      // SF Symbol
+        let name: String      // 单位名（如「杯奶茶」）
+        let unitPrice: Double
+    }
+
+    /// 候选实物，按单价从低到高。挑「数量落在 1...99 且最具体」的那个展示。
+    static let items: [Item] = [
+        Item(icon: "cup.and.saucer.fill", name: "杯奶茶", unitPrice: 18),
+        Item(icon: "fork.knife", name: "顿外卖", unitPrice: 30),
+        Item(icon: "popcorn.fill", name: "场电影", unitPrice: 50),
+        Item(icon: "flame.fill", name: "顿火锅", unitPrice: 150),
+    ]
+
+    /// 为金额挑一个最合适的换算文案，如「≈ 13 杯奶茶」。
+    /// 金额过小（不足 1 杯奶茶）返回 nil，避免显示「0 杯」。
+    static func describe(_ amount: Double) -> (icon: String, text: String)? {
+        guard amount >= items[0].unitPrice else { return nil }
+        // 优先选「数量 1...99 的最贵实物」，数字既具体又不夸张；
+        // 若所有实物数量都 >99（金额极大），用最贵实物兜底（宁可数量大也不退回奶茶）。
+        let chosen = items.last { amount / $0.unitPrice >= 1 && amount / $0.unitPrice <= 99 }
+            ?? items.last!
+        let count = Int(amount / chosen.unitPrice)
+        return (chosen.icon, "≈ \(count) \(chosen.name)")
+    }
+}
