@@ -6,10 +6,12 @@ import Foundation
 /// 不依赖任何隐藏状态，方便测试。
 struct SalaryEngine {
     let config: SalaryConfig
+    let holidays: [HolidayConfig]
     var calendar: Calendar
 
-    init(config: SalaryConfig, calendar: Calendar = .current) {
+    init(config: SalaryConfig, holidays: [HolidayConfig] = [], calendar: Calendar = .current) {
         self.config = config
+        self.holidays = holidays
         self.calendar = calendar
     }
 
@@ -56,8 +58,11 @@ struct SalaryEngine {
         return count
     }
 
-    /// 判断某天是否为工作日（仅看 weekday，V1 不含节假日）。
+    /// 判断某天是否为工作日。
+    /// 优先级：调休补班 > 法定节假日 > 按星期几（V1 默认 holidays 为空，退化为按星期几）。
     func isWorkday(_ date: Date) -> Bool {
+        if HolidayConfig.isMakeupWorkday(date, holidays: holidays, calendar: calendar) { return true }
+        if HolidayConfig.isHoliday(date, holidays: holidays, calendar: calendar) { return false }
         let weekday = calendar.component(.weekday, from: date)
         return config.workDays.contains(weekday)
     }

@@ -230,4 +230,36 @@ final class SalaryEngineTests: XCTestCase {
         XCTAssertEqual(decoded.workStartMinutes, 9 * 60)
         XCTAssertEqual(decoded.workEndMinutes, 18 * 60)
     }
+
+    // MARK: - 节假日接口（调休补班 > 法定节假日 > 按星期几）
+
+    func testHoliday_legalHolidayNotWorkday() {
+        // 2024-05-01 劳动节（周三，本是工作日），设为法定节假日 → 不计薪
+        let holiday = HolidayConfig(date: date(2024, 5, 1), name: "劳动节")
+        let engine = SalaryEngine(config: makeConfig(), holidays: [holiday], calendar: calendar)
+        XCTAssertFalse(engine.isWorkday(date(2024, 5, 1)), "法定节假日不应是工作日")
+        XCTAssertEqual(engine.todayEarnings(now: date(2024, 5, 1, 14, 0)), 0, "节假日收入为0")
+    }
+
+    func testHoliday_makeupWorkdayCountsAsWork() {
+        // 2024-05-11 周六，调休补班 → 计薪
+        let makeup = HolidayConfig(date: date(2024, 5, 11), name: "劳动节调休", isWorkday: true)
+        let engine = SalaryEngine(config: makeConfig(), holidays: [makeup], calendar: calendar)
+        XCTAssertTrue(engine.isWorkday(date(2024, 5, 11)), "调休补班应算工作日")
+        XCTAssertGreaterThan(engine.todayEarnings(now: date(2024, 5, 11, 20, 0)), 0, "调休补班应计薪")
+    }
+
+    func testHoliday_emptyFallsBackToWeekday() {
+        // 无节假日数据时退化为按星期几（向后兼容）
+        let engine = SalaryEngine(config: makeConfig(), holidays: [], calendar: calendar)
+        XCTAssertTrue(engine.isWorkday(date(2024, 5, 1)), "无节假日数据时周三仍是工作日")
+        XCTAssertFalse(engine.isWorkday(date(2024, 5, 11)), "无节假日数据时周六是休息日")
+    }
+
+    func testHolidayConfigCodableRoundtrip() throws {
+        let h = HolidayConfig(date: date(2024, 5, 1), name: "劳动节", isWorkday: false)
+        let data = try JSONEncoder().encode(h)
+        let decoded = try JSONDecoder().decode(HolidayConfig.self, from: data)
+        XCTAssertEqual(h, decoded)
+    }
 }

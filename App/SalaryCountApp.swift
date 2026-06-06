@@ -3,11 +3,25 @@ import SwiftUI
 @main
 struct SalaryCountApp: App {
     @StateObject private var store = SalaryStore()
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+
+    init() {
+        // UI 测试用：传 -resetOnboarding 强制回到首次启动状态。
+        if CommandLine.arguments.contains("-resetOnboarding") {
+            UserDefaults.standard.set(false, forKey: "hasSeenOnboarding")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(store)
+            if hasSeenOnboarding {
+                RootView()
+                    .environmentObject(store)
+            } else {
+                OnboardingView {
+                    hasSeenOnboarding = true
+                }
+            }
         }
     }
 }
