@@ -33,6 +33,9 @@ final class SalaryStore: ObservableObject {
     var todayEarnings: Double { engine.todayEarnings(now: now) }
     var monthEarnings: Double { engine.monthEarnings(now: now) }
     var yearEarnings: Double { engine.yearEarnings(now: now) }
+
+    /// 预计今年总收入 = 月薪 × 12（固定目标值，与年度累计形成对照）。
+    var yearTarget: Double { config.monthlySalary * 12 }
     var isWorkdayToday: Bool { engine.isWorkday(now) }
 
     /// 今天匹配的节假日名（如「春节」「国庆调休」）；普通日返回 nil。

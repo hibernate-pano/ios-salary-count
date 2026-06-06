@@ -18,6 +18,7 @@ struct SalaryEntry: TimelineEntry {
     let workStart: Date
     let workEnd: Date
     let isConfigured: Bool           // App Group 未配置时为 false，渲染引导提示
+    let theme: AccentTheme           // 跟随 App 的配色主题
 
     /// 从配置和指定时刻构造一个 entry。
     static func make(config: SalaryConfig, at date: Date, isConfigured: Bool = true) -> SalaryEntry {
@@ -39,7 +40,8 @@ struct SalaryEntry: TimelineEntry {
             state: engine.dayState(now: date),
             workStart: anchor(config.workStartMinutes),
             workEnd: anchor(config.workEndMinutes),
-            isConfigured: isConfigured
+            isConfigured: isConfigured,
+            theme: AccentTheme.loadShared()
         )
     }
 

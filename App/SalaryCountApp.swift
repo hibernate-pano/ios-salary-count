@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct SalaryCountApp: App {
     @StateObject private var store = SalaryStore()
+    @StateObject private var themeStore = ThemeStore()
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     init() {
@@ -14,14 +15,19 @@ struct SalaryCountApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if hasSeenOnboarding {
-                RootView()
-                    .environmentObject(store)
-            } else {
-                OnboardingView {
-                    hasSeenOnboarding = true
+            Group {
+                if hasSeenOnboarding {
+                    RootView()
+                        .environmentObject(store)
+                } else {
+                    OnboardingView {
+                        hasSeenOnboarding = true
+                    }
                 }
             }
+            .environment(\.brand, themeStore.brand)
+            .preferredColorScheme(themeStore.colorScheme)
+            .environmentObject(themeStore)
         }
     }
 }

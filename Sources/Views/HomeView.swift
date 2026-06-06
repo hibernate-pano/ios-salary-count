@@ -22,6 +22,7 @@ func formatPerSecond(_ value: Double) -> String {
 /// 实时跳动主页。
 struct HomeView: View {
     @EnvironmentObject private var store: SalaryStore
+    @Environment(\.brand) private var brand
 
     var body: some View {
         NavigationStack {
@@ -32,6 +33,7 @@ struct HomeView: View {
                         StatCard(title: "本月累计", icon: "calendar", amount: store.monthEarnings)
                         StatCard(title: "年度累计", icon: "chart.line.uptrend.xyaxis", amount: store.yearEarnings)
                     }
+                    YearTargetCard(earned: store.yearEarnings, target: store.yearTarget)
                 }
                 .padding()
             }
@@ -86,9 +88,9 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
         .padding(.horizontal, 20)
-        .background(Brand.heroGradient(isWorkday: store.isWorkdayToday))
+        .background(brand.heroGradient(isWorkday: store.isWorkdayToday))
         .clipShape(RoundedRectangle(cornerRadius: Brand.cornerLarge))
-        .shadow(color: Brand.primary.opacity(store.isWorkdayToday ? 0.28 : 0.0), radius: 16, y: 8)
+        .shadow(color: brand.primary.opacity(store.isWorkdayToday ? 0.28 : 0.0), radius: 16, y: 8)
         .shadow(color: Brand.accentWarm.opacity(store.isWorkdayToday ? 0.0 : 0.22), radius: 16, y: 8)
     }
 
@@ -114,13 +116,14 @@ struct StatCard: View {
     let title: String
     let icon: String
     let amount: Double
+    @Environment(\.brand) private var brand
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.footnote)
-                    .foregroundStyle(Brand.primary)
+                    .foregroundStyle(brand.primary)
                 Text(title)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -131,6 +134,61 @@ struct StatCard: View {
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
                 .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: Brand.cornerMedium))
+    }
+}
+
+/// 预计今年总收入卡片：目标值 + 已赚进度。
+struct YearTargetCard: View {
+    let earned: Double
+    let target: Double
+    @Environment(\.brand) private var brand
+
+    private var progress: Double {
+        guard target > 0 else { return 0 }
+        return min(1, max(0, earned / target))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "target")
+                    .font(.footnote)
+                    .foregroundStyle(brand.primary)
+                Text("预计今年总收入")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Int((progress * 100).rounded()))%")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(brand.primary)
+            }
+
+            Text(formatCurrency(target))
+                .font(.moneyTitle)
+                .monospacedDigit()
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+                .foregroundStyle(.primary)
+
+            // 已赚进度条
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color(.tertiarySystemFill))
+                    Capsule().fill(brand.heroGradient)
+                        .frame(width: progress * geo.size.width)
+                }
+            }
+            .frame(height: 8)
+
+            Text("已赚 \(formatCurrency(earned))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)

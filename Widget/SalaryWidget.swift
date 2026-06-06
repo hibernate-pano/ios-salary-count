@@ -30,7 +30,7 @@ struct SalaryWidget: Widget {
         StaticConfiguration(kind: kind, provider: SalaryProvider()) { entry in
             SalaryWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("工资计算器")
+        .configurationDisplayName("牛马薪水计算器")
         .description("实时显示你今天的工作收入与进度")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

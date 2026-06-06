@@ -50,6 +50,17 @@ V2「实时工资计数器 + 桌面小组件」已完成并验证通过，可在
 - 质感升级：背景金色径向辉光、金额发光阴影、¥/小数小一号的主次字号、徽章细描边
 - Brand 设计语言扩充财富主题色（widgetDarkBackground/goldGradient/gold/gain）
 
+### V2.5：主题系统 + 预计年收入 + 真机测试（tag v0.7）
+- 改 App 名「牛马薪水计算器」；收入页加「预计今年总收入」卡片（月薪×12 + 已赚进度）
+- 设置页加「完成」键 + 下滑收起键盘（修复数字键盘无法收起）
+- **主题系统**：配色（薄荷绿/鎏金/樱粉/海蓝）+ 明暗（跟随系统/浅色/深色）两独立维度，设置页「外观」区切换，@AppStorage 持久化
+  - `AppTheme.swift`（AccentTheme/AppearanceMode/BrandTheme + 环境注入 `\.brand`）、`ThemeStore.swift`
+  - HomeView 改用 `@Environment(\.brand)` 取色
+- **小组件主题跟随**：放弃独立「金色+深底」，改为与主界面统一的主题渐变卡 + 白色金额；主题经 App Group 传给小组件（`accent_theme` 键）
+- **真机测试**：免费个人账号自动签名装机（去 Widget/App Group，因免费账号不支持）；project.yml 有「device-only」与「含 Widget 模拟器验证」两套用法
+- 删除未用的 CowMascot.swift（像素/小牛方向已放弃）
+- 32 单测通过
+
 ## 编译路径（App target）
 
 ```

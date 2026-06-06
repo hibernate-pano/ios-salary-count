@@ -10,14 +10,18 @@ enum AppGroup {
     /// entitlements 中保持一致。真机部署时还需在开发者账号开启该能力。
     static let identifier = "group.com.jasper.salarycount"
 
-    /// 共享的 UserDefaults。App Group 未正确配置时返回 nil，
-    /// 让调用方能区分"未配置"与"真实数据"，而非静默退化。
+    /// 共享的 UserDefaults。
+    /// 有 App Group entitlement 时用共享 suite；否则回退到 standard，
+    /// 保证免费账号真机测试时 App 自身仍能持久化（仅小组件读不到）。
     static var defaults: UserDefaults? {
-        UserDefaults(suiteName: identifier)
+        UserDefaults(suiteName: identifier) ?? .standard
     }
 
     /// 配置存储的键。
     static let configKey = "salary_config"
+
+    /// 配色主题存储的键（小组件读取以跟随 App 主题）。
+    static let accentThemeKey = "accent_theme"
 }
 
 extension SalaryConfig {

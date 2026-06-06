@@ -7,15 +7,13 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.6"
-    CURRENT_PROJECT_VERSION: "7"
+    MARKETING_VERSION: "0.7"
+    CURRENT_PROJECT_VERSION: "8"
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: NO
-    # 模拟器用 ad-hoc 签名即可应用 entitlements（App Group 必需）。
-    # 真机部署时改为你的开发团队自动签名。
-    CODE_SIGN_IDENTITY: "-"
-    CODE_SIGNING_REQUIRED: NO
-    CODE_SIGNING_ALLOWED: YES
+    # 真机用免费个人账号自动签名。Team 在 Xcode 里选，或命令行传 DEVELOPMENT_TEAM。
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: T622K7RR78
 
 targets:
   SalaryCount:
@@ -29,31 +27,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount
         PRODUCT_NAME: SalaryCount
         INFOPLIST_FILE: App/Info.plist
-        CODE_SIGN_ENTITLEMENTS: App/SalaryCount.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
-    dependencies:
-      - target: SalaryWidgetExtension
-
-  SalaryWidgetExtension:
-    type: app-extension
-    platform: iOS
-    sources:
-      # Widget 自身代码
-      - path: Widget
-      # 共享的纯逻辑（引擎/模型/存储约定），App 与 Widget 都用
-      - path: Sources/Engine
-      - path: Sources/Models
-      - path: Sources/Store/AppGroup.swift
-      - path: Sources/DesignSystem
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount.widget
-        PRODUCT_NAME: SalaryWidgetExtension
-        INFOPLIST_FILE: Widget/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Widget/SalaryWidget.entitlements
-        TARGETED_DEVICE_FAMILY: "1"
+    # 注：真机测试用免费账号，暂不含 Widget（App Group 需付费账号）。
+    # Widget target 仍保留在仓库，付费账号后恢复 dependencies 与 entitlements 即可。
 
   SalaryCountTests:
     type: bundle.unit-test
@@ -67,28 +45,12 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount.tests
         GENERATE_INFOPLIST_FILE: YES
 
-  SalaryCountUITests:
-    type: bundle.ui-testing
-    platform: iOS
-    sources:
-      - path: UITests
-    dependencies:
-      - target: SalaryCount
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount.uitests
-        GENERATE_INFOPLIST_FILE: YES
-        TEST_TARGET_NAME: SalaryCount
-
 schemes:
   SalaryCount:
     build:
       targets:
         SalaryCount: all
-        SalaryWidgetExtension: all
         SalaryCountTests: [test]
-        SalaryCountUITests: [test]
     test:
       targets:
         - SalaryCountTests
-        - SalaryCountUITests
