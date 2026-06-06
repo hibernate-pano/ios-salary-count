@@ -302,4 +302,57 @@ final class SalaryEngineTests: XCTestCase {
     func testData2026_unknownYearIsEmpty() {
         XCTAssertTrue(HolidayData.holidays(year: 2099).isEmpty, "无数据年份应返回空，退化为按星期几")
     }
+
+    // MARK: - 全天模式（24×7 平摊）
+
+    private func allDayConfig(monthlySalary: Double = 30000) -> SalaryConfig {
+        SalaryConfig(monthlySalary: monthlySalary, earningMode: .allDay)
+    }
+
+    func testAllDay_everyDayIsWorkday() {
+        let engine = SalaryEngine(config: allDayConfig(), calendar: calendar)
+        XCTAssertTrue(engine.isWorkday(date(2024, 3, 16)), "全天模式周六也算赚钱日")
+        XCTAssertTrue(engine.isWorkday(date(2024, 3, 17)), "全天模式周日也算赚钱日")
+    }
+
+    func testAllDay_dailyWorkSecondsIsFullDay() {
+        let engine = SalaryEngine(config: allDayConfig(), calendar: calendar)
+        XCTAssertEqual(engine.dailyWorkSeconds, 86400, "全天模式每日 86400 秒")
+    }
+
+    func testAllDay_dailySalaryDividesByCalendarDays() {
+        let engine = SalaryEngine(config: allDayConfig(monthlySalary: 31000), calendar: calendar)
+        // 2024年3月31天 → 日薪 = 31000/31 = 1000
+        XCTAssertEqual(engine.dailySalary(now: date(2024, 3, 15)), 1000, accuracy: 1e-6)
+    }
+
+    func testAllDay_secondsWorkedFromMidnight() {
+        let engine = SalaryEngine(config: allDayConfig(), calendar: calendar)
+        // 中午12点 = 从0点起 43200 秒
+        XCTAssertEqual(engine.secondsWorkedToday(now: date(2024, 3, 15, 12, 0)), 43200, accuracy: 1)
+    }
+
+    func testAllDay_earningsNeverZeroOnWeekend() {
+        let engine = SalaryEngine(config: allDayConfig(), calendar: calendar)
+        // 周六中午也在赚钱
+        XCTAssertGreaterThan(engine.todayEarnings(now: date(2024, 3, 16, 12, 0)), 0)
+    }
+
+    func testAllDay_stateAlwaysWorking() {
+        let engine = SalaryEngine(config: allDayConfig(), calendar: calendar)
+        XCTAssertEqual(engine.dayState(now: date(2024, 3, 16, 3, 0)), .working, "全天模式凌晨也是工作中")
+    }
+
+    func testAllDay_fullDayEqualsDailySalary() {
+        let engine = SalaryEngine(config: allDayConfig(monthlySalary: 31000), calendar: calendar)
+        // 一天接近结束（23:59）今日收入 ≈ 日薪 1000（差不到 1 分钟的钱）
+        XCTAssertEqual(engine.todayEarnings(now: date(2024, 3, 15, 23, 59)), 1000, accuracy: 1.0)
+    }
+
+    func testEarningModeCodableRoundtrip() throws {
+        let config = allDayConfig()
+        let data = try JSONEncoder().encode(config)
+        let decoded = try JSONDecoder().decode(SalaryConfig.self, from: data)
+        XCTAssertEqual(decoded.earningMode, .allDay)
+    }
 }

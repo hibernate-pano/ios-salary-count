@@ -1,5 +1,29 @@
 import Foundation
 
+/// 计薪模式。
+enum EarningMode: String, Codable, CaseIterable, Identifiable {
+    /// 工作时段：按工作日 + 上下班时间 + 午休计薪（默认）。
+    case workHours
+    /// 全天 24 小时：月薪平摊到当月每一秒，天天每秒都在涨。
+    case allDay
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .workHours: return "工作时段"
+        case .allDay: return "全天 24 小时"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .workHours: return "按工作日、上下班时间计薪"
+        case .allDay: return "月薪平摊到每一天每一秒"
+        }
+    }
+}
+
 /// 工资配置（值类型，可持久化）。
 ///
 /// 时间一律以「自当日午夜起的分钟数」存储（Int），彻底脱离绝对时刻与时区——
@@ -11,6 +35,9 @@ import Foundation
 struct SalaryConfig: Codable, Equatable {
     /// 月薪（元）
     var monthlySalary: Double
+
+    /// 计薪模式：工作时段 / 全天。
+    var earningMode: EarningMode
 
     /// 上班时间，自午夜起的分钟数（如 9:00 = 540）
     var workStartMinutes: Int
@@ -34,6 +61,7 @@ struct SalaryConfig: Codable, Equatable {
 
     init(
         monthlySalary: Double = 3000,
+        earningMode: EarningMode = .workHours,
         workStartMinutes: Int = 9 * 60,
         workEndMinutes: Int = 18 * 60,
         lunchEnabled: Bool = true,
@@ -42,6 +70,7 @@ struct SalaryConfig: Codable, Equatable {
         workDays: Set<Int> = [2, 3, 4, 5, 6]
     ) {
         self.monthlySalary = monthlySalary
+        self.earningMode = earningMode
         self.workStartMinutes = workStartMinutes
         self.workEndMinutes = workEndMinutes
         self.lunchEnabled = lunchEnabled
@@ -94,8 +123,21 @@ struct SalaryConfig: Codable, Equatable {
     // MARK: - Codable：只编码分钟字段，Date 桥接不参与
 
     private enum CodingKeys: String, CodingKey {
-        case monthlySalary, workStartMinutes, workEndMinutes
+        case monthlySalary, earningMode, workStartMinutes, workEndMinutes
         case lunchEnabled, lunchStartMinutes, lunchEndMinutes, workDays
+    }
+
+    /// 自定义解码：earningMode 缺失时（旧存档）默认工作时段，保证向后兼容。
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        monthlySalary = try c.decode(Double.self, forKey: .monthlySalary)
+        earningMode = (try? c.decode(EarningMode.self, forKey: .earningMode)) ?? .workHours
+        workStartMinutes = try c.decode(Int.self, forKey: .workStartMinutes)
+        workEndMinutes = try c.decode(Int.self, forKey: .workEndMinutes)
+        lunchEnabled = try c.decode(Bool.self, forKey: .lunchEnabled)
+        lunchStartMinutes = try c.decode(Int.self, forKey: .lunchStartMinutes)
+        lunchEndMinutes = try c.decode(Int.self, forKey: .lunchEndMinutes)
+        workDays = try c.decode(Set<Int>.self, forKey: .workDays)
     }
 
     // MARK: - 时间换算工具

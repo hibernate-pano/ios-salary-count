@@ -13,3 +13,6 @@ DerivedData/
 
 # XcodeGen 生成的工程（可由 project.yml 重建）
 *.xcodeproj/
+# 工具生成的本地缓存
+.codegraph/
+.reasonix/

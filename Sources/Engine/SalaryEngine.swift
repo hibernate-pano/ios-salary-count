@@ -31,10 +31,18 @@ struct SalaryEngine {
         return span > 0 ? span : 0
     }
 
-    /// 每日有效工作秒数 = (下班 − 上班) − 午休时长。无效配置时为 0。
+    /// 每日有效工作秒数。工作时段模式 = (下班−上班)−午休；全天模式 = 86400。
     var dailyWorkSeconds: TimeInterval {
+        if config.earningMode == .allDay { return 86400 }
         let net = workSpanMinutes - lunchSpanMinutes
         return TimeInterval(max(0, net) * 60)
+    }
+
+    /// 指定年月的总天数（全天模式日薪用）。
+    func daysInMonth(year: Int, month: Int) -> Int {
+        guard let first = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
+              let range = calendar.range(of: .day, in: .month, for: first) else { return 0 }
+        return range.count
     }
 
     // MARK: - 工作日计数
@@ -59,8 +67,10 @@ struct SalaryEngine {
     }
 
     /// 判断某天是否为工作日。
-    /// 优先级：调休补班 > 法定节假日 > 按星期几（V1 默认 holidays 为空，退化为按星期几）。
+    /// 全天模式：天天都是赚钱日。
+    /// 工作时段模式优先级：调休补班 > 法定节假日 > 按星期几。
     func isWorkday(_ date: Date) -> Bool {
+        if config.earningMode == .allDay { return true }
         if HolidayConfig.isMakeupWorkday(date, holidays: holidays, calendar: calendar) { return true }
         if HolidayConfig.isHoliday(date, holidays: holidays, calendar: calendar) { return false }
         let weekday = calendar.component(.weekday, from: date)
@@ -74,11 +84,13 @@ struct SalaryEngine {
 
     // MARK: - 工资单价
 
-    /// 指定月份的日工资 = 月薪 / 当月工作日数。
+    /// 指定月份的日工资。工作时段 = 月薪/当月工作日数；全天 = 月薪/当月总天数。
     func dailySalary(now: Date) -> Double {
         let year = calendar.component(.year, from: now)
         let month = calendar.component(.month, from: now)
-        let days = workDays(year: year, month: month)
+        let days = config.earningMode == .allDay
+            ? daysInMonth(year: year, month: month)
+            : workDays(year: year, month: month)
         guard days > 0 else { return 0 }
         return config.monthlySalary / Double(days)
     }
@@ -117,6 +129,12 @@ struct SalaryEngine {
     /// 非工作日 → 0；上班前 → 0；午休中 → 仅上班到午休的部分；
     /// 下班后 → 封顶 dailyWorkSeconds；工作中 → 已过秒数（过了午休则扣掉）。
     func secondsWorkedToday(now: Date) -> TimeInterval {
+        // 全天模式：从今天 0 点起算，每秒都在赚。
+        if config.earningMode == .allDay {
+            let startOfDay = calendar.startOfDay(for: now)
+            return min(86400, max(0, now.timeIntervalSince(startOfDay)))
+        }
+
         guard isWorkday(now) else { return 0 }
 
         let (workStart, workEnd) = workWindow(on: now)
@@ -193,6 +211,9 @@ struct SalaryEngine {
 
     /// 判断 `now` 时刻的当日状态。
     func dayState(now: Date) -> DayState {
+        // 全天模式：永远在「工作中」（天天每秒都在赚）。
+        if config.earningMode == .allDay { return .working }
+
         guard isWorkday(now) else { return .dayOff }
 
         let (workStart, workEnd) = workWindow(on: now)

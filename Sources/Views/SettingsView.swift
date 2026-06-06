@@ -16,13 +16,22 @@ struct SettingsView: View {
             Form {
                 salarySection
                 appearanceSection
-                workTimeSection
-                lunchSection
-                workDaysSection
+                // 全天模式下无需工时/工作日设置，隐藏
+                if store.config.earningMode == .workHours {
+                    workTimeSection
+                    lunchSection
+                    workDaysSection
+                }
                 aboutSection
             }
             .navigationTitle("设置")
             .scrollDismissesKeyboard(.interactively)   // 下滑表单即可收起键盘
+            .modifier(SettingsHaptics(
+                accent: themeStore.accent,
+                appearance: themeStore.appearance,
+                workDays: store.config.workDays,
+                lunchEnabled: store.config.lunchEnabled
+            ))
             .toolbar {
                 // 数字键盘上方的「完成」按钮
                 ToolbarItemGroup(placement: .keyboard) {
@@ -34,7 +43,7 @@ struct SettingsView: View {
     }
 
     private var salarySection: some View {
-        Section("工资") {
+        Section {
             HStack {
                 Text("月薪")
                 Spacer()
@@ -45,6 +54,21 @@ struct SettingsView: View {
                 Text("元")
                     .foregroundStyle(.secondary)
             }
+
+            // 计薪模式
+            Picker("计薪模式", selection: $store.config.earningMode.animation()) {
+                ForEach(EarningMode.allCases) { mode in
+                    Text(mode.displayName).tag(mode)
+                }
+            }
+            // 模式说明
+            Text(store.config.earningMode.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("工资")
+        } footer: {
+            Text("两种模式只是把月薪摊到不同的时间里：工作时段模式钱集中在上班时段、单位时间更高；全天模式 24 小时细水长流、单位时间较低。同一时刻数字不同是正常的，到月底累计总额一致。")
         }
     }
 
@@ -170,4 +194,24 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environmentObject(SalaryStore())
+}
+
+/// 设置页触感反馈（iOS 17+ 生效；iOS 16 无触感但不影响功能）。
+private struct SettingsHaptics: ViewModifier {
+    let accent: AccentTheme
+    let appearance: AppearanceMode
+    let workDays: Set<Int>
+    let lunchEnabled: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content
+                .sensoryFeedback(.selection, trigger: accent)
+                .sensoryFeedback(.selection, trigger: appearance)
+                .sensoryFeedback(.selection, trigger: workDays)
+                .sensoryFeedback(.impact(weight: .light), trigger: lunchEnabled)
+        } else {
+            content
+        }
+    }
 }

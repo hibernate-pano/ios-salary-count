@@ -55,22 +55,23 @@ struct HomeView: View {
             .font(.subheadline.weight(.medium))
             .foregroundStyle(.white.opacity(0.9))
 
-            // 今日已赚大数字
+            // 今日已赚大数字（休息日改显本月累计，不冷清）
             VStack(spacing: 6) {
-                Text("今日已赚")
+                Text(store.isWorkdayToday ? "今日已赚" : "本月已赚")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.85))
-                Text(formatCurrency(store.todayEarnings))
+                Text(formatCurrency(store.isWorkdayToday ? store.todayEarnings : store.monthEarnings))
                     .font(.moneyHero(54))
                     .foregroundStyle(.white)
                     .monospacedDigit()
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                     .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                    .numericRoll(value: store.isWorkdayToday ? store.todayEarnings : store.monthEarnings)
             }
             .padding(.vertical, 4)
 
-            // 每秒跳动提示（放大「钱在涨」的爽感）
+            // 工作日：每秒跳动提示；休息日：温暖文案
             if store.isWorkdayToday {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.up.right")
@@ -78,6 +79,17 @@ struct HomeView: View {
                     Text("每秒 +\(formatPerSecond(store.engine.salaryPerSecond(now: store.now)))")
                         .font(.callout.weight(.medium))
                         .monospacedDigit()
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(.white.opacity(0.18), in: Capsule())
+            } else {
+                HStack(spacing: 5) {
+                    Image(systemName: "cup.and.saucer.fill")
+                        .font(.caption2)
+                    Text(restMessage)
+                        .font(.callout.weight(.medium))
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
@@ -109,6 +121,14 @@ struct HomeView: View {
         }
         return store.isWorkdayToday ? "今天是工作日" : "今天是休息日"
     }
+
+    /// 休息日温暖文案：节假日点出节日名，普通休息日给句轻松话。
+    private var restMessage: String {
+        if let name = store.todayHolidayName {
+            return "\(name)快乐 · 好好休息"
+        }
+        return "今天不上班 · 好好歇着"
+    }
 }
 
 /// 统计卡片（带图标，留白精修）。
@@ -134,6 +154,7 @@ struct StatCard: View {
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
                 .foregroundStyle(.primary)
+                .numericRoll(value: amount)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -189,6 +210,7 @@ struct YearTargetCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+                .numericRoll(value: earned)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -200,4 +222,20 @@ struct YearTargetCard: View {
 #Preview {
     HomeView()
         .environmentObject(SalaryStore())
+}
+
+// MARK: - 数字平滑滚动（iOS 17+ 生效，iOS 16 降级为普通显示）
+
+extension View {
+    /// 金额变化时数字平滑滚动。iOS 16 无动画但正常显示。
+    @ViewBuilder
+    func numericRoll(value: Double) -> some View {
+        if #available(iOS 17.0, *) {
+            self
+                .contentTransition(.numericText(value: value))
+                .animation(.snappy(duration: 0.6), value: value)
+        } else {
+            self
+        }
+    }
 }
