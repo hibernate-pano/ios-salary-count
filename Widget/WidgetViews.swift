@@ -54,21 +54,22 @@ struct SmallSalaryView: View {
             }
 
             ZStack {
-                ProgressRing(
+                LiquidFill(
                     progress: entry.progress,
-                    lineWidth: 10,
-                    dashed: entry.state == .dayOff
+                    isRest: entry.state == .dayOff
                 )
                 VStack(spacing: 2) {
                     Text(WidgetFormat.currency(centerAmount))
-                        .font(.system(.title2, design: .rounded).weight(.semibold))
+                        .font(.system(.title2, design: .rounded).weight(.bold))
                         .monospacedDigit()
                         .minimumScaleFactor(0.6)
                         .lineLimit(1)
                         .foregroundStyle(.primary)
+                        .shadow(color: Color(.systemBackground).opacity(0.6), radius: 3)
                     Text(centerSubtitle)
-                        .font(.caption2)
+                        .font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
+                        .shadow(color: Color(.systemBackground).opacity(0.6), radius: 2)
                 }
                 .padding(.horizontal, 6)
             }
@@ -92,22 +93,23 @@ struct MediumSalaryView: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // 左：进度环
+            // 左：液体填充
             ZStack {
-                ProgressRing(
+                LiquidFill(
                     progress: entry.progress,
-                    lineWidth: 11,
-                    dashed: entry.state == .dayOff
+                    isRest: entry.state == .dayOff
                 )
                 VStack(spacing: 2) {
                     Text(WidgetFormat.currency(entry.state == .dayOff ? entry.monthEarnings : entry.todayEarnings))
-                        .font(.system(.title2, design: .rounded).weight(.semibold))
+                        .font(.system(.title2, design: .rounded).weight(.bold))
                         .monospacedDigit()
                         .minimumScaleFactor(0.6)
+                        .shadow(color: Color(.systemBackground).opacity(0.6), radius: 3)
                         .lineLimit(1)
                     Text(entry.state == .dayOff ? "本月" : WidgetFormat.percent(entry.progress))
-                        .font(.caption2)
+                        .font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
+                        .shadow(color: Color(.systemBackground).opacity(0.6), radius: 2)
                 }
                 .padding(.horizontal, 4)
             }

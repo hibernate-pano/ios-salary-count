@@ -26,12 +26,11 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 28) {
-                    statusBadge
+                VStack(spacing: 20) {
                     todayHero
-                    HStack(spacing: 16) {
-                        StatCard(title: "本月累计", amount: store.monthEarnings)
-                        StatCard(title: "年度累计", amount: store.yearEarnings)
+                    HStack(spacing: 14) {
+                        StatCard(title: "本月累计", icon: "calendar", amount: store.monthEarnings)
+                        StatCard(title: "年度累计", icon: "chart.line.uptrend.xyaxis", amount: store.yearEarnings)
                     }
                 }
                 .padding()
@@ -41,14 +40,56 @@ struct HomeView: View {
         }
     }
 
-    private var statusBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: statusIcon)
-            Text(statusText)
+    // MARK: - 今日 Hero（渐变卡片，视觉主角）
+
+    private var todayHero: some View {
+        VStack(spacing: 14) {
+            // 顶部状态行
+            HStack(spacing: 6) {
+                Image(systemName: statusIcon)
+                Text(statusText)
+                Spacer()
+            }
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(.white.opacity(0.9))
+
+            // 今日已赚大数字
+            VStack(spacing: 6) {
+                Text("今日已赚")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.85))
+                Text(formatCurrency(store.todayEarnings))
+                    .font(.moneyHero(54))
+                    .foregroundStyle(.white)
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+            }
+            .padding(.vertical, 4)
+
+            // 每秒跳动提示（放大「钱在涨」的爽感）
+            if store.isWorkdayToday {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption2.weight(.bold))
+                    Text("每秒 +\(formatPerSecond(store.engine.salaryPerSecond(now: store.now)))")
+                        .font(.callout.weight(.medium))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(.white.opacity(0.18), in: Capsule())
+            }
         }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 20)
+        .background(Brand.heroGradient(isWorkday: store.isWorkdayToday))
+        .clipShape(RoundedRectangle(cornerRadius: Brand.cornerLarge))
+        .shadow(color: Brand.primary.opacity(store.isWorkdayToday ? 0.28 : 0.0), radius: 16, y: 8)
+        .shadow(color: Brand.accentWarm.opacity(store.isWorkdayToday ? 0.0 : 0.22), radius: 16, y: 8)
     }
 
     /// 状态图标：补班/工作日用公文包，节假日用日历，普通休息日用咖啡杯。
@@ -66,52 +107,35 @@ struct HomeView: View {
         }
         return store.isWorkdayToday ? "今天是工作日" : "今天是休息日"
     }
-
-    private var todayHero: some View {
-        VStack(spacing: 12) {
-            Text("今日已赚")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            Text(formatCurrency(store.todayEarnings))
-                .font(.system(size: 52, weight: .bold, design: .rounded))
-                .foregroundStyle(.tint)
-                .monospacedDigit()
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-
-            Text("每秒 +\(formatPerSecond(store.engine.salaryPerSecond(now: store.now)))")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
 }
 
-/// 统计卡片。
+/// 统计卡片（带图标，留白精修）。
 struct StatCard: View {
     let title: String
+    let icon: String
     let amount: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.footnote)
+                    .foregroundStyle(Brand.primary)
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             Text(formatCurrency(amount))
-                .font(.title3)
-                .fontWeight(.semibold)
+                .font(.moneyTitle)
                 .monospacedDigit()
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
+                .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
+        .padding(16)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: Brand.cornerMedium))
     }
 }
 

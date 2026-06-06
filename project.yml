@@ -7,8 +7,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.4"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "0.5"
+    CURRENT_PROJECT_VERSION: "6"
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: NO
     # 模拟器用 ad-hoc 签名即可应用 entitlements（App Group 必需）。
@@ -46,6 +46,7 @@ targets:
       - path: Sources/Engine
       - path: Sources/Models
       - path: Sources/Store/AppGroup.swift
+      - path: Sources/DesignSystem
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jasper.salarycount.widget
