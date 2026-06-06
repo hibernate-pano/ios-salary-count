@@ -405,4 +405,48 @@ final class SalaryEngineTests: XCTestCase {
         let result = MoneyEquivalent.describe(50000)
         XCTAssertEqual(result?.icon, "flame.fill") // 火锅，而非奶茶
     }
+
+    // MARK: - 数据持久性 & 向后兼容（更新不丢数据的保证）
+
+    /// 模拟「旧版本存的 JSON」——没有 earningMode 字段。
+    /// 新版本必须能正确读出，并默认工作时段，绝不解码失败导致配置清空。
+    func testBackwardCompat_oldDataWithoutEarningMode() throws {
+        let oldJSON = """
+        {
+          "monthlySalary": 8888,
+          "workStartMinutes": 540,
+          "workEndMinutes": 1080,
+          "lunchEnabled": true,
+          "lunchStartMinutes": 720,
+          "lunchEndMinutes": 780,
+          "workDays": [2, 3, 4, 5, 6]
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(SalaryConfig.self, from: oldJSON)
+        XCTAssertEqual(decoded.monthlySalary, 8888, "旧数据的月薪必须保留")
+        XCTAssertEqual(decoded.earningMode, .workHours, "缺失字段应默认工作时段，而非崩溃/清空")
+        XCTAssertEqual(decoded.workStartMinutes, 540)
+        XCTAssertEqual(decoded.workDays, [2, 3, 4, 5, 6])
+    }
+
+    /// 经由 UserDefaults 存取一轮，配置完整无损（模拟版本更新后重新读取）。
+    func testPersistence_roundtripThroughUserDefaults() {
+        let suite = UserDefaults(suiteName: "test.persistence.\(UUID().uuidString)")!
+        var config = makeConfig(monthlySalary: 12345)
+        config.earningMode = .allDay
+        config.saveShared(to: suite)
+
+        let loaded = SalaryConfig.loadShared(from: suite)
+        XCTAssertEqual(loaded.monthlySalary, 12345)
+        XCTAssertEqual(loaded.earningMode, .allDay)
+        XCTAssertEqual(loaded, config, "存取一轮后配置应完全一致")
+    }
+
+    /// 存储为空时（首次安装/读取失败）返回默认配置，不崩溃。
+    func testPersistence_emptyReturnsDefault() {
+        let suite = UserDefaults(suiteName: "test.empty.\(UUID().uuidString)")!
+        let loaded = SalaryConfig.loadShared(from: suite)
+        XCTAssertEqual(loaded, SalaryConfig(), "无数据时应返回默认配置")
+    }
 }

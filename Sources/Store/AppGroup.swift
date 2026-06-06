@@ -22,6 +22,9 @@ enum AppGroup {
 
     /// 配色主题存储的键（小组件读取以跟随 App 主题）。
     static let accentThemeKey = "accent_theme"
+
+    /// 明暗模式存储的键。
+    static let appearanceModeKey = "appearance_mode"
 }
 
 extension SalaryConfig {

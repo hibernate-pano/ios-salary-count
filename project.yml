@@ -7,8 +7,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.9"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "0.9.1"
+    CURRENT_PROJECT_VERSION: "11"
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: NO
     # 真机用免费个人账号自动签名。Team 在 Xcode 里选，或命令行传 DEVELOPMENT_TEAM。
