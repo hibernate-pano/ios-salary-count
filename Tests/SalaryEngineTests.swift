@@ -362,8 +362,15 @@ final class SalaryEngineTests: XCTestCase {
         XCTAssertTrue(HolidayData.hasData(year: 2026), "2026 应已内置节假日数据")
     }
 
-    func testHolidayData_2027_missing() {
-        XCTAssertFalse(HolidayData.hasData(year: 2027), "2027 未内置，应报告缺失以便 UI 提示")
+    func testHolidayData_2027_2028_hasData() {
+        // 2027 / 2028 已内置（节日日期来自农历换算，放假与调休为推算，见 HolidayData 注释）。
+        XCTAssertTrue(HolidayData.hasData(year: 2027), "2027 应已内置")
+        XCTAssertTrue(HolidayData.hasData(year: 2028), "2028 应已内置")
+    }
+
+    func testHolidayData_2029_stillMissing() {
+        // 留一道「还没扩到哪一年」的判据：2029 未内置，UI 该提示。
+        XCTAssertFalse(HolidayData.hasData(year: 2029), "2029 未内置，应报告缺失以便 UI 提示")
     }
 
     func testHolidayData_supportedYearsMatchesHolidays() {
@@ -371,6 +378,53 @@ final class SalaryEngineTests: XCTestCase {
         for year in HolidayData.supportedYears {
             XCTAssertFalse(HolidayData.holidays(year: year).isEmpty,
                            "\(year) 声明已支持但数据为空")
+        }
+    }
+
+    /// 农历节日日期必须能对上——这是 2027/2028 数据里唯一「准」的那部分，不能错。
+    ///
+    /// 基准值用系统农历逐日扫描得出，且已用 2026 年校验过方法本身：
+    /// 同一套算法算 2026 得到的春节 2/17、端午 6/19、中秋 9/25 与国务院已发布安排一致。
+    private func assertFestival(
+        year: Int, month: Int, day: Int, name: String,
+        file: StaticString = #filePath, line: UInt = #line
+    ) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? .current
+        let target = calendar.date(from: DateComponents(year: year, month: month, day: day))!
+        let configs = HolidayData.holidays(year: year)
+        let hit = configs.first { calendar.isDate($0.date, inSameDayAs: target) && !$0.isWorkday }
+        XCTAssertNotNil(hit, "\(year)-\(month)-\(day) 应是\(name)放假日", file: file, line: line)
+        XCTAssertEqual(hit?.name.contains(name) ?? false, true,
+                       "\(year)-\(month)-\(day) 的节日名应包含「\(name)」，实际 \(hit?.name ?? "nil")",
+                       file: file, line: line)
+    }
+
+    func testHolidayData_2027_festivalDates() {
+        // 正月初一 2027-02-06、五月初五 06-09、八月十五 09-15
+        assertFestival(year: 2027, month: 2, day: 6, name: "春节")
+        assertFestival(year: 2027, month: 6, day: 9, name: "端午")
+        assertFestival(year: 2027, month: 9, day: 15, name: "中秋")
+    }
+
+    func testHolidayData_2028_festivalDates() {
+        // 正月初一 2028-01-26、五月初五 05-28、八月十五 10-03
+        assertFestival(year: 2028, month: 1, day: 26, name: "春节")
+        assertFestival(year: 2028, month: 5, day: 28, name: "端午")
+        assertFestival(year: 2028, month: 10, day: 3, name: "中秋")
+    }
+
+    func testHolidayData_noDuplicateDays() {
+        // 同一天既标放假又标补班，会让「今天算不算上班」自相矛盾。
+        for year in HolidayData.supportedYears {
+            var seen: [Date] = []
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? .current
+            for c in HolidayData.holidays(year: year) {
+                let day = calendar.startOfDay(for: c.date)
+                XCTAssertFalse(seen.contains(day), "\(year) 有重复日期：\(day)")
+                seen.append(day)
+            }
         }
     }
 
