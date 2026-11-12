@@ -373,6 +373,34 @@ final class SalaryEngineTests: XCTestCase {
         XCTAssertFalse(HolidayData.hasData(year: 2029), "2029 未内置，应报告缺失以便 UI 提示")
     }
 
+    /// 把「哪些年份还是推算的」变成一条会说话的测试。
+    ///
+    /// 它**故意不失败** —— 推算数据是有意为之，不是 bug。
+    /// 但它会在测试输出里印出来，而且当 2027 被换成官方数据后，
+    /// 下面 `extrapolatedYears` 的期望值必须跟着改 —— 改的时候你就重新想了一遍。
+    func testHolidayData_extrapolatedYearsAreDeclared() {
+        // 每个内置年份都必须在 confidence 里表态，不能有「有数据但没说可信度」的年份。
+        for year in HolidayData.supportedYears {
+            XCTAssertNotNil(HolidayData.confidence[year],
+                            "\(year) 有节假日数据，但没在 confidence 里说明是官方还是外推")
+        }
+        // 反过来：声明了可信度却没数据的年份，也是漂移。
+        for year in HolidayData.confidence.keys {
+            XCTAssertTrue(HolidayData.supportedYears.contains(year),
+                          "\(year) 在 confidence 里但 supportedYears 没有")
+        }
+
+        // 这份清单是「欠的债」。官方数据换进来之后必须变短，否则这条会红提醒你更新。
+        XCTAssertEqual(
+            HolidayData.extrapolatedYears, [2027, 2028],
+            """
+            仍是外推的年份变了。
+            - 如果你刚把某年换成国务院正式安排：把该年的 confidence 改成 .official，并缩短这个数组。
+            - 如果这条突然多出年份：说明有人加了数据但没标可信度。
+            """
+        )
+    }
+
     func testHolidayData_supportedYearsMatchesHolidays() {
         // supportedYears 与实际有数据的年份必须一致，否则提示会撒谎。
         for year in HolidayData.supportedYears {

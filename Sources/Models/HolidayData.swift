@@ -22,8 +22,39 @@ import Foundation
 /// 最坏情况是某人被算成工作日而实际放假（或少算一天工资），不会崩溃。
 enum HolidayData {
 
+    /// 数据的可信程度。
+    ///
+    /// 这不是注释，是**能被断言的代码** —— 目的是让「哪些年份还是推算的」这件事
+    /// 不会因为没人记得而一直烂着。
+    enum Confidence: String {
+        /// 国务院已发布正式安排，数据照抄。
+        case official
+        /// 节日日期准（农历换算），但放假区间与调休是按往年做法外推的。
+        /// **官方安排发布后必须回来替换成 `.official`。**
+        case extrapolated
+    }
+
+    /// 每年数据的可信程度。新增年份必须在这里表态，不能默认混过去。
+    static let confidence: [Int: Confidence] = [
+        2026: .official,
+        2027: .extrapolated,
+        2028: .extrapolated,
+    ]
+
     /// 已内置数据的年份集合。新增年份数据时同步更新此处。
     static let supportedYears: Set<Int> = [2026, 2027, 2028]
+
+    /// 还没换成官方数据的年份（按年份升序）。
+    ///
+    /// UI 可以据此提示，测试据此守住「别把推算数据当成真的发出去」。
+    static var extrapolatedYears: [Int] {
+        confidence.filter { $0.value == .extrapolated }.keys.sorted()
+    }
+
+    /// 指定年份的数据是否仍是外推的。
+    static func isExtrapolated(year: Int) -> Bool {
+        confidence[year] == .extrapolated
+    }
 
     /// 取指定年份的节假日数据；无数据返回空数组（退化为按星期几判断）。
     static func holidays(year: Int) -> [HolidayConfig] {
